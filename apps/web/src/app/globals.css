@@ -1,0 +1,167 @@
+@import 'tailwindcss';
+
+/*
+ * PharmaGuard design tokens (ui-tokens.md).
+ * Semantic values live on :root exactly as documented and are mapped into the
+ * Tailwind theme inline, so a token change propagates to every utility.
+ * Spacing keeps Tailwind's 4px base (ui-tokens.md §4); radius is remapped to
+ * the documented 6/8/12/16px scale (§5).
+ */
+:root {
+  --color-primary-950: #063f37;
+  --color-primary-900: #075548;
+  --color-primary-800: #08745d;
+  --color-primary-700: #07875f;
+  --color-primary-600: #0a9a69;
+  --color-primary-500: #16a878;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7faf9;
+  --color-background: #f5f7f7;
+
+  --color-text: #17201e;
+  --color-text-muted: #6b7774;
+  --color-border: #e3e9e7;
+
+  --color-success: #149447;
+  --color-warning: #f59e0b;
+  --color-danger: #ef3d3d;
+  --color-info: #2879d8;
+
+  /* Status tokens (ui-tokens.md §8) - each status carries bg/fg/border. */
+  --status-safe-bg: #e7f5ee;
+  --status-safe-fg: #149447;
+  --status-safe-border: #b5e0cb;
+
+  --status-success-bg: #e7f5ee;
+  --status-success-fg: #0f7a39;
+  --status-success-border: #a7d8bd;
+
+  --status-warning-bg: #fdf3dd;
+  --status-warning-fg: #a16207;
+  --status-warning-border: #f7dd9e;
+
+  --status-critical-bg: #fde9e9;
+  --status-critical-fg: #c22626;
+  --status-critical-border: #f6b8b8;
+
+  --status-expired-bg: #fbdcdc;
+  --status-expired-fg: #9f1f1f;
+  --status-expired-border: #f0a3a3;
+
+  --status-info-bg: #e4effb;
+  --status-info-fg: #1d5fa8;
+  --status-info-border: #bcd4f2;
+
+  --status-quarantine-bg: #e8f0ef;
+  --status-quarantine-fg: #075548;
+  --status-quarantine-border: #bcd8d3;
+}
+
+@theme inline {
+  /* ui-tokens.md §3 - Inter / system sans-serif stack. */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+
+  /* ui-tokens.md §5 radius scale. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --color-primary-950: var(--color-primary-950);
+  --color-primary-900: var(--color-primary-900);
+  --color-primary-800: var(--color-primary-800);
+  --color-primary-700: var(--color-primary-700);
+  --color-primary-600: var(--color-primary-600);
+  --color-primary-500: var(--color-primary-500);
+
+  --color-surface: var(--color-surface);
+  --color-surface-muted: var(--color-surface-muted);
+  --color-background: var(--color-background);
+
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-border: var(--color-border);
+
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+
+  --color-status-safe: var(--status-safe-fg);
+  --color-status-safe-bg: var(--status-safe-bg);
+  --color-status-safe-fg: var(--status-safe-fg);
+  --color-status-safe-border: var(--status-safe-border);
+
+  --color-status-success: var(--status-success-fg);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-fg: var(--status-success-fg);
+  --color-status-success-border: var(--status-success-border);
+
+  --color-status-warning: var(--status-warning-fg);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-fg: var(--status-warning-fg);
+  --color-status-warning-border: var(--status-warning-border);
+
+  --color-status-critical: var(--status-critical-fg);
+  --color-status-critical-bg: var(--status-critical-bg);
+  --color-status-critical-fg: var(--status-critical-fg);
+  --color-status-critical-border: var(--status-critical-border);
+
+  --color-status-expired: var(--status-expired-fg);
+  --color-status-expired-bg: var(--status-expired-bg);
+  --color-status-expired-fg: var(--status-expired-fg);
+  --color-status-expired-border: var(--status-expired-border);
+
+  --color-status-info: var(--status-info-fg);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-fg: var(--status-info-fg);
+  --color-status-info-border: var(--status-info-border);
+
+  --color-status-quarantine: var(--status-quarantine-fg);
+  --color-status-quarantine-bg: var(--status-quarantine-bg);
+  --color-status-quarantine-fg: var(--status-quarantine-fg);
+  --color-status-quarantine-border: var(--status-quarantine-border);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
+
+  /* ui-tokens.md §10 - respect reduced-motion preferences. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Appearance preferences (Settings > Appearance, PRD §10.21) - device-local.
+   Unlayered so they override Tailwind utilities. */
+html.pg-reduce-motion *,
+html.pg-reduce-motion ::before,
+html.pg-reduce-motion ::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+html.pg-compact table tbody td {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}

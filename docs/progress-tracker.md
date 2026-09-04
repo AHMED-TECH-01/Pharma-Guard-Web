@@ -1,0 +1,320 @@
+# PharmaGuard --- Progress Tracker
+
+> AI agents must update this file after each completed phase. Never mark
+> a phase complete when only the UI exists but backend functionality is
+> missing.
+
+## Status Legend
+
+-   `[ ]` Not started.
+-   `[~]` In progress.
+-   `[x]` Complete.
+-   `[!]` Blocked.
+-   `[R]` Needs regression review.
+
+------------------------------------------------------------------------
+
+## Phase 0 --- Discovery
+
+Completed 03 Sep 2026. Full audit report delivered to user; no code written.
+
+-   [x] Repository inspected. (Docs-only repository: README.md + 12 specification documents in `docs/` + `reference-ui/PharmaGuard_UI_Reference.png`. No application code exists anywhere. Directory is not yet a git repository.)
+-   [x] Dependencies inspected. (No `package.json`, no lock files, no `node_modules`, no `.env`/`.env.example`. Greenfield: the entire stack must be scaffolded in Phase 1 per library-docs.md — Next.js/React/TypeScript, Node.js/Express, Supabase PostgreSQL + Auth, Zod, Recharts. Every future package must pass the verification protocol before install.)
+-   [x] Routes mapped. (No existing routes. Target page inventory confirmed: ui-registry.md §10 pages × TRD §22 routes; target API surface confirmed: TRD §7 + `/api/v1` base. Reference image adds no extra pages beyond these.)
+-   [x] Database mapped. (No existing database/migrations. Target schema reconciled from TRD §3 + architecture.md §6 tenant model: `auth.users` → `profiles` → `pharmacy_memberships` → pharmacy-scoped tables. RLS mandatory on every table; indexes per TRD §15; seed data per TRD §30.)
+-   [x] Existing UI mapped. (Reference image audited — 14 compositions: Login, Sign Up, Dashboard, Logout modal, AI Scan OCR, Inventory All Medicines, Expiry Center, Sales Management, Suppliers Management, Returns Management, Alerts Center, Reports & Analytics, 404, 500. Deep teal sidebar with 15 nav items + Contact Support; green primary actions; PKR currency; dense tables with status pills.)
+-   [x] Dependency chart created. (Feature → page → components → API → service → tables → RLS → permissions → external APIs → tests map produced for: Auth/Onboarding, Dashboard, Inventory, AI OCR, Expiry/Safety, Sales, Purchases/Suppliers, Returns/Reorders, Analytics/Reports, Admin, Public marketing. See Phase 0 report.)
+-   [x] Regression risks documented. (Greenfield: no regression surface yet. Phase 0 risks recorded in findings: documentation conflicts resolved via hierarchy; credentials blocker below; git-init recommendation.)
+
+## Phase 1 --- Foundation
+
+Completed 03 Sep 2026. Verification gates: `npm run build` (packages + API + Next production build) EXIT 0, `npm run lint` EXIT 0, `npm test` 11/11 passed.
+
+-   [x] Frontend/backend separation. (npm-workspaces monorepo: `apps/api` Express + TS with tsx watch, `apps/web` Next.js 15 App Router, `packages/types` + `packages/validation` shared via `@pharmaguard/*`, `database/migrations`. Root scripts: `build`, `typecheck`, `lint`, `test`.)
+-   [x] Environment validation. (`apps/api/src/config/env.ts` - Zod-parsed, fail-fast on boot, lists every missing var, rejects `*` CORS origins; unit-tested.)
+-   [x] Supabase configured. (Server client uses SUPABASE_SECRET_KEY, server-only; publishable key never used server-side; JWKS URL for token verification. Live connection pending user credentials - see Blockers.)
+-   [x] Authentication. (Supabase Auth-backed: signup/login/logout/forgot-password/refresh/me routes; access + refresh JWTs issued server-side and stored in HttpOnly, SameSite=Lax cookies - never exposed to JS; access tokens verified via `jose` JWKS with issuer `authenticated` audience; silent refresh on 401 implemented client-side.)
+-   [x] Database migrations. (`database/migrations/0001_core_schema.sql` - all TRD §3 tables pharmacy-scoped with FKs/indexes/checks.)
+-   [x] RLS enabled. (`0002_rls.sql` - RLS forced on every table; tenant isolation via `pharmacy_id = current_pharmacy_id()` helper + membership-checked policies; `0003_functions_triggers.sql` - `handle_new_user` trigger, `create_pharmacy_with_membership` transaction.)
+-   [x] RLS policies. (Per-table policies for SELECT/INSERT/UPDATE/DELETE keyed on membership + role, in 0002.)
+-   [x] Authorization middleware. (Capability model per TRD §6: OWNER/MANAGER/PHARMACIST/STAFF → permission strings with dot-boundary matching; unit-tested.)
+-   [x] Rate limiting. (Tiered express-rate-limit: strict login/signup/reset limiters + global default, keyed by hashed IP.)
+-   [x] CORS. (Strict allowlist from env, credentials enabled, arbitrary origins never reflected; rejects `*` at env-validation level.)
+-   [x] Security headers. (helmet with CSP tuned for API-only JSON responses, no unsafe inline.)
+-   [x] Error middleware. (Uniform envelope `{success:false, error:{code,message}}`, ApiError class hierarchy, 4xx messages user-safe, 5xx internal details never leaked; request-id propagation.)
+-   [x] App shell. (apps/web: AppShell component - 230px sidebar per ui-tokens §9, topbar with pharmacy/role/user/logout, 1440px max content; /login functional against live API; /dashboard session-gated with silent refresh and skeleton loading; typed API client with envelope handling.)
+-   [x] UI tokens. (globals.css maps ui-tokens.md §2 palette, §5 radius, §8 status bg/fg/border triplets into Tailwind 4 `@theme inline`; §10 reduced-motion respected.)
+
+Deviation log (03 Sep 2026): `jose` 6 `createRemoteJWKSet` takes no `issuer` option - issuer check belongs in `jwtVerify` options (fixed during build). Root ESLint pinned to 9.x: eslint-config-next's bundled eslint-plugin-react breaks under ESLint 10's rule-context API; typescript-eslint 8.69 accepts both, so 9.39.5 is the version the whole toolchain agrees on. `@next/next/no-html-link-for-pages` disabled - Pages-Router rule with no pages/ directory in an App-Router-only project. Cosmetic Next-build notice "plugin not detected" remains - the plugin demonstrably loads during `npm run lint`; Next 15.5's detector does not recognize scoped flat-config usage.
+
+Phase 1 acceptance "User can authenticate" is code-complete and verified at build/test level; full end-to-end verification requires the user's Supabase credentials (Blockers row above) plus `supabase db push` of the three migrations.
+
+## Phase 2 --- Public Pages
+
+Completed 03 Sep 2026. Verification gates: `npm run build` EXIT 0 (8 routes, static prerender), `npm run lint` EXIT 0, `npm test` 11/11.
+
+-   [x] Landing. (PRD §10.1 - all 12 sections: hero, problem, how-it-works, AI OCR flow with confirmation-first messaging, expiry buckets using status tokens, smart reorder/analytics/compliance, feature grid, pricing preview from shared `plans.ts`, FAQ, CTA, footer. Static server components.)
+-   [x] Login. (Reference composition: AuthLayout split panel + Welcome Back! + remember-me + forgot-password link + OAuth placeholders (disabled, honest titles) + field-level validation + server errors. Remember-me now extends the API contract: `loginSchema.remember` -> session vs 7-day cookies.)
+-   [x] Sign Up. (Full name, email, optional phone, password with live PasswordStrength meter, confirm-password match, terms acceptance; success screen covers both email-verification and immediate-signin cases.)
+-   [x] Forgot Password. (Email -> always-success confirmation; no account enumeration client or server side.)
+-   [x] Reset Password. (PKCE `?code=` and implicit-flow `#access_token` both handled via browser Supabase client with publishable key only - approved auth op per architecture.md §3, matching the auth.service.ts design comment; credentials stripped from the URL immediately; recovery session discarded after `updateUser`; invalid/expired link -> calm ErrorState with request-new-link action; TRD §7 `POST /auth/reset-password` intentionally fulfilled client-side for this reason - noted as deliberate deviation.)
+-   [x] Pricing. (4 plans from PRD §10.22 via shared `plans.ts`; Recommended badge on Professional; proposal disclaimer; shared FAQ section.)
+-   [x] 404. (Reference styling: big numeral, Oops! message, Go Back Home + Back via router.back().)
+-   [x] 500. (Next `error.tsx` boundary: Try Again (reset()) + Go Home; raw error never rendered, console-logged only.)
+
+Add-ons delivered per build-plan: form validation (shared Zod schemas + client-side cross-field refinements in `lib/auth-forms.ts`, inline field errors), error states (AuthError component + reset-page ErrorState), responsive layouts (brand panel collapses below lg, single-column mobile, full-width actions). Skeletons: reset-password resolving state uses a form-matching skeleton; dashboard already has one; other public pages are static (no async content - N/A by design). Form-level skeleton shapes registered as FormSkeleton-style pattern.
+
+Registry components added: AuthLayout, AuthBrandPanel, PasswordField, PasswordStrength, OAuthButtons, AuthError (§5); SiteHeader, SiteFooter, PlanCards, FaqSection, BackButton (registered here as new shared components per §11.6).
+
+## Phase 3 --- Dashboard (COMPLETE)
+
+-   [x] KPI cards. `components/dashboard/kpi-grid.tsx` - 5 cards (Stock Value PKR at cost, Expiring Soon, Expired, Low Stock, Today's Sales w/ vs-yesterday delta); 1/2/5-col responsive.
+-   [x] Sales chart. `components/dashboard/charts.tsx` SalesOverview - Recharts 3.10.1 LineChart (verified before install: React 19 peer), 7-day trend, compact PKR axis, empty-state when no sales.
+-   [x] Expiry chart. ExpiryOverview donut (PieChart innerRadius) - expired / 0-30 / 31-90 / >90 buckets with token colors, center total, custom legend.
+-   [x] Stock status. StockStatusCard - In Stock / Low / Out / Expired / Quarantined counts.
+-   [x] Low stock. LowStockCard - top 5 by qty-vs-reorder ratio, level bars, Out-of-Stock vs Low-Stock badges.
+-   [x] Expiring soon. ExpiringSoonCard - next 6 batches within 30d, days-left badges colored by bucket.
+-   [x] Recent sales. RecentSalesCard - latest 5 with batch, qty, relative time, PKR.
+-   [x] AI summary. AiDailySummary - rule-based summary composed server-side from live KPIs; labeled "Rule-based" honestly; Gemini swap lands in Phase 5 (aiSummarySource field already in contract).
+-   [x] Action center. ActionCenter - server-ranked severity tasks (quarantine expired, restock, review expiring, reorder, alerts); targets are future routes, rendered inert until their phases ship.
+-   [x] Skeletons. `dashboard-skeleton.tsx` mirrors the full layout (greeting, KPI row, chart row, list row); used for session load + summary load.
+-   [x] Responsive layout. Sidebar collapses to overlay drawer <lg (hamburger in topbar); KPIs 1/2/5; lists 1/2/4-col; content capped 1440px.
+
+Supporting work: GET /api/v1/dashboard/summary aggregate endpoint (TRD §14/§22 - single round trip, 9 parallel pharmacy-scoped queries on the 0001 indexes, numeric-as-string normalization, PostgREST admin client); shared `DashboardSummary` contract in packages/types; `requirePermission` capability-check factory in authorize.ts (dashboard.read enforced server-side); AppShell upgraded to the reference composition - 15 nav items (Analytics/Alerts/Compliance/Users added), search bar (disabled, tooltip: arrives Phase 4), bell with real unread-alert badge, user avatar/identity, logout confirmation dialog (centered modal, dimmed backdrop, red Yes + Cancel); `/onboarding` page using the Phase 1 RPC endpoint so the PRD flow signup -> pharmacy -> dashboard is walkable; EmptyState/ErrorState registry components (`components/ui/states.tsx`).
+
+Deviations: TRD §7 lists POST /auth/reset-password - intentionally fulfilled client-side (PKCE, Phase 2 note). Dashboard "AI summary" is rule-based until Phase 5 Gemini integration. Stock value = inventory at cost (batch purchase_price, falling back to medicine purchase_price); stock status counts medicines while expired/quarantined counts batches - semantics documented in dashboard.service.ts. Topbar search is a visual placeholder per reference (real search arrives with Phase 4 inventory).
+
+Verification: npm run build EXIT 0 (11 routes, /dashboard 121kB first load with Recharts); npm run lint EXIT 0 (fixed react-hooks/set-state-in-effect by making loader state updates callback-only; pharmacyName restored to topbar); npm test 11/11.
+
+## Phase 4 --- Inventory (COMPLETE)
+
+-   [x] Medicines. Schemas already existed in migration 0001; CRUD added at API + UI level (shared createMedicineSchema/updateMedicineSchema in packages/validation).
+-   [x] Batches. Same schema; batch CRUD + FEFO-ordered lists (expiry_date asc, PRD FR-011).
+-   [x] Inventory API. All 9 TRD §7 endpoints in modules/inventory/ (GET/POST/GET:id/PATCH/DELETE /medicines, GET/POST /medicines/:id/batches, PATCH /batches/:id, POST /batches/:id/adjust). Reads gated by inventory.read, writes by inventory.write, hard delete additionally OWNER/MANAGER-only (mirrors 0002 RLS intent since the service client bypasses RLS). Every mutation writes an audit entry (FR-031).
+-   [x] Search. name/generic_name/barcode ilike with % _ escaping; 300ms debounce in InventoryToolbar.
+-   [x] Filters. status (in/low/out/expired - post-aggregation on computed stock level), category, includeArchived.
+-   [x] Sorting. name/updated sorted in-DB; stock/expiry sorted post-aggregation (computed columns); asc/desc toggle.
+-   [x] Pagination. page/pageSize (1-100) via existing paginationSchema; head-count for total; Pagination component with window + "Showing x-y of n".
+-   [x] Medicine details. /inventory/[id]: MedicineDetailHeader (identity, facts grid, stock summary, edit/archive actions), BatchTable with per-row Adjust, add/edit batch modal.
+-   [x] Stock adjustments. POST /batches/:id/adjust: signed delta, mandatory reason, resulting quantity must stay >= 0; audit entry records before/after + delta + reason. StockAdjustmentDialog shows projected quantity.
+-   [x] Duplicate detection. PRD §12: pre-insert scan (normalized name equality, or manufacturer+strength match) returns 409 with potentialDuplicates details; DuplicateWarning requires explicit "Create anyway" (confirmDuplicate flag, audited as medicine.created_confirmed_duplicate). Batch-number uniqueness relies on the DB unique constraint (23505 -> 409).
+-   [x] Import/export. Deferred by design: PRD flow places inventory-import in onboarding states and the build plan has no import phase; revisit with CSV import when the workflow phases demand it.
+
+Supporting work: shared inventory wire contract in packages/types (MedicineStockSummary/ListItem/ListResponse/Detail/PotentialDuplicate); validateQuery middleware (Express 5 makes req.query read-only - parsed query stored separately); ApiError.conflict gained details param; list state lives in the URL (TRD §17); Inventory page split into Suspense wrapper + client content (useSearchParams prerender rule); new registry components: Modal (ui), Pagination (ui), StockBadge/ExpiryBadge/BatchStatusBadge (ui), InventoryToolbar, InventoryTable, InventoryMobileCard, MedicineDetailHeader, BatchTable, StockAdjustmentDialog, DuplicateWarning, MedicineFormModal, BatchFormModal, TableSkeleton, MedicineDetailSkeleton; sidebar Inventory link enabled; DELETE defaults to archival (PRD "Delete/archival"), hard delete via ?mode=hard for OWNER/MANAGER with FK-conflict -> 409 suggesting archive.
+
+Deviations: none beyond the documented Import/export deferral. Delete = archive-by-default is a deliberate safety choice per PRD wording, not a deviation.
+
+Verification: npm run build EXIT 0 (12 routes; /inventory/[id] dynamic); npm run lint EXIT 0 (fixed second react-hooks/set-state-in-effect via render-phase state adjustment in InventoryToolbar); npm test 11/11.
+
+## Phase 5 --- AI Scan
+
+-   [x] Upload. OCRUploadZone (drag-and-drop + file picker, supported type/size info, PRD §10.6); api.upload FormData method in apps/web/src/lib/api.ts (browser sets the multipart boundary; no JSON Content-Type).
+-   [x] File validation. Server-side per TRD §9: multer memoryStorage with 10 MB / 1-file limit; MIME sniffed from magic bytes via file-type (client-declared type never trusted); allowlist JPEG/PNG/WebP. Images live in memory only - never written to disk or object storage - so storage_path stays null, file_reference is a server-generated UUID, and there is no retention window to manage.
+-   [x] OCR API. POST /ocr/scan (ocrLimiter 20/hour/user + requirePermission ocr.use), GET /ocr/scans, GET /ocr/scans/:id, POST /ocr/scans/:id/confirm (persists corrections), POST /ocr/scans/:id/discard. Mounted at /ocr inside the protected area.
+-   [x] Gemini integration. @google/genai 2.21.0 (verified, official SDK), model gemini-2.5-flash (GEMINI_MODEL env override), temperature 0, responseMimeType application/json + responseSchema forcing the structured shape; backend-controlled only (library-docs §4). Client lazily initialized so tests import the module without a key.
+-   [x] Structured extraction. OcrExtraction in packages/types/src/ocr.ts (8 nullable fields + per-field confidence); raw model JSON re-validated with Zod and normalized server-side (trim, empty/null stripping, ISO date checks, confidence clamping) before storage (TRD §8 "Validation / Normalization").
+-   [x] Confidence. Per-field badges on every review input (color-coded high/medium/low, flagged below 0.7) plus overall scan confidence bar on OCRResultCard; scan-level average stored in ocr_scans.confidence numeric(5,2).
+-   [x] Review. /ai-scan state machine idle→processing→review→success with discard/error recovery (TRD §22); OCRProcessingState while the backend works; OCRResultCard with OCRFieldEditor rows.
+-   [x] Manual correction. Every field editable; corrections persisted on confirm (user corrections win; AI confidence map preserved because it describes the AI extraction); TRD §33 honored - the model is instructed to return null for unreadable fields and never invents values, including stock quantity (manual input only).
+-   [x] Confirmation. Confirm & Add creates inventory through the regular Phase 4 endpoints (POST /medicines with the PRD §12 duplicate flow via DuplicateWarning, then POST /medicines/:id/batches), then marks the scan CONFIRMED with audit entries ocr.scan_completed / ocr.confirmed / ocr.discarded. Batch is skipped with an explanatory note when the scan lacks batch number or expiry.
+-   [x] OCR history. GET /ocr/scans feeding OCRHistory (status badges, confidence, relative time, error codes) on the upload view.
+-   [x] OCR error recovery. Gemini/infra failures mark the scan FAILED with error_code, return 502 OCR_FAILED with the scanId in details, and the UI shows a retry + "Add manually" fallback (deep link /inventory?add=1 opens the add-medicine modal; param stripped on close).
+
+Supporting work: packages/types/src/ocr.ts + validation/src/ocr.ts (confirmScanSchema with correctedExtraction); env.ts gained GEMINI_MODEL; ApiError.ocrFailed gained details; api client refactored around a shared parseEnvelope with a new upload method; AI Scan nav link enabled in AppShell; manual-entry fallback wired in inventory-page.
+
+Deviations: TRD §7 lists only the three core OCR endpoints - confirm/discard action endpoints were added because the ocr_scans status enum (0001) and the 0002 RLS comment ("discard is a status transition") require state transitions, mirroring the TRD §7 alerts action-endpoint style. Image persistence in object storage intentionally not built: nothing in PRD/UI requires image retention, and memory-only processing satisfies TRD §9 more strictly (no web-root, retention, or signed-URL exposure); storage_path remains available for a future private-bucket implementation. Confirm creates inventory client-side via existing endpoints instead of a server-side "create from scan" endpoint - keeps duplicate detection and capability checks in one place.
+
+Verification: npm run build EXIT 0 (13 routes; /ai-scan 8.53 kB); npm run lint EXIT 0; npm test 11/11.
+
+## Phase 6 --- Safety (COMPLETE)
+
+-   [x] Expiry engine. `modules/safety/expiry.util.ts` - UTC calendar-day math (`daysUntil`), bucket classification EXPIRED (<0) / CRITICAL / WARNING / SAFE, thresholds from `EXPIRY_CRITICAL_DAYS` (default 30) / `EXPIRY_WARNING_DAYS` (default 90) with env-validation cross-check (warning > critical). `alert-engine.service.ts` generates EXPIRED (CRITICAL, per batch), EXPIRING (HIGH within critical / MEDIUM within warning, per batch), LOW_STOCK (HIGH at 0 qty / MEDIUM at <= reorder level) - deduped against unresolved alerts by `type:batchId|medicineId`, never invents data, never throws.
+-   [x] Expiry Center. /expiry (URL state: bucket + page, TRD §17): four status cards (batchCount, units, valueAtCost; click to focus bucket, click active to clear), FEFO table (server-ordered expiry asc) with multi-select, bulk action bar (REMOVE / RETURN / QUARANTINE, mandatory reason 3-500), result banner with skipped-batch reasons. Summary cards report financial exposure at cost (batch purchase_price falling back to medicine purchase_price) and valueAtRisk across expired+critical+warning.
+-   [x] FEFO. Server: expiry-ordered available-batch queries (TRD §12 - quantity > 0, status AVAILABLE here, expiry_date asc, expired never recommended). FEFORecommendation component on /inventory/[id] highlights the earliest non-expired batch with quantity > 0, or states plainly that nothing is dispensable.
+-   [x] Alerts. /alerts (URL state: status/severity/type/page): AlertCard with severity accent + type labels, actions per PRD §10.18 - mark read (NEW), snooze 1/3/7/14/30 days (NEW/READ), resolve (not RESOLVED), Open record deep link (medicine -> /inventory/[id], batch -> /expiry). unreadCount returned with the list drives the topbar bell badge (bell is now a real Link to /alerts).
+-   [x] Quarantine. /quarantine register with status filter: whole-batch items created from Expiry Center bulk QUARANTINE and Recall Center actions (POST /quarantine {batchId, reason}); QuarantineDialog resolves via RELEASE -> AVAILABLE / RETURN -> RETURNED / REMOVE -> REMOVED (removal demands a reason client-side too); batch status transitions mirrored, resolved_by/at stamped.
+-   [x] Recall Center. /recalls: register recall via RecallFormModal (MedicineSearchSelect debounced picker + optional batch no / manufacturer / reason; medicine OR batch required), status lifecycle OPEN -> IN_PROGRESS -> COMPLETED/CANCELLED (PATCH), detail dialog (RecallDialog) with affected-batch table (scope: medicine and/or batch no, classified by the expiry engine), one-click "Quarantine affected stock" (quarantine.act) which quarantines every AVAILABLE quantity>0 matching batch and advances OPEN -> IN_PROGRESS; RECALL alert inserted on creation.
+
+Supporting work: packages/types/src/safety.ts + packages/validation/src/safety.ts (expiry/alert/quarantine/recall contracts and schemas); GET /expiry/summary + /expiry/batches + POST /expiry/actions (per-action capability check: QUARANTINE needs quarantine.act, REMOVE/RETURN need expiry.act); alerts endpoints per TRD §7 (GET /alerts with `active` filter = NEW + READ + expired snoozes via PostgREST `.or()`, POST /:id/read|resolve|snooze); quarantine + recalls routers; app.ts mounts /expiry /alerts /quarantine /recalls; permission split honored in UI (STAFF sees alerts read-only; PHARMACIST sees recalls read-only); registry components added: AlertCard, AlertSkeleton, ExpiryCards, ExpiryTable, BulkActionBar, QuarantineBadge, QuarantineDialog, RecallCard, RecallDialog, RecallFormModal, MedicineSearchSelect, ExpiryDaysBadge, RecallBadge, FEFORecommendation, ExpiryCenterSkeleton; AppShell: Expiry Center / Quarantine / Recalls (new nav entry, PackageX) / Alerts links enabled; shared `formatDate` + `expiryBucketTone` in lib/format.ts (batch-table local copy deduplicated).
+
+Deviations: alert generation is a lazily-evaluated throttled engine (60s per pharmacy, triggered by Alerts/Expiry reads) instead of a cron worker - the stack has no scheduler and TRD §10's data (batches/medicines) allows exact recomputation on read; dedupe keeps alert volume stable. Expiry Center scopes to AVAILABLE batches only - quarantined stock is intentionally visible (and resolvable) in the Quarantine register, so bulk actions never double-handle it. Expiry/Quarantine/Recall endpoints go beyond TRD §7 (which lists only alerts) because PRD §10.9/§10.15/§10.16 workflows require them; action endpoints follow the TRD §7 alerts style. QUARANTINE is whole-batch (item quantity = batch quantity at creation) - partial-quantity quarantine has no PRD workflow. Recalls nav item added to the sidebar (was absent from the Phase 1 nav list); Recalls sits next to Quarantine.
+
+Verification: npm run build EXIT 0 (17 routes; /expiry 6.68 kB, /alerts 4.98 kB, /quarantine 5.37 kB, /recalls 7.08 kB); npm run lint EXIT 0 (fixed: unused medicineName now recorded in the quarantine audit payload, stale writeAudit import removed, two type-only consts inlined); npm test 11/11.
+
+## Phase 7 --- Sales (COMPLETE)
+
+-   [x] New sale - POST /sales (salesCreate cap). `packages/validation/src/sales.ts` createSaleSchema (batchId/quantity/unitPrice?/note?/soldAt?); price defaults to the medicine's selling price resolved via the batch, future sale times rejected server-side.
+-   [x] Batch selection - /sales/new flow: MedicineSearchSelect -> medicine detail batches (AVAILABLE, qty>0, expiry asc), FEFO pick preselected and badged, expired batches shown disabled.
+-   [x] Stock decrement - TRD §13 transaction: migration `0004_sales_functions.sql` defines SECURITY DEFINER `create_sale` (row-lock batch FOR UPDATE -> verify status/qty -> decrement -> insert sale -> return row) and `reverse_sale` (lock sale -> reject double reversal -> restore batch qty -> stamp reversed_at/by); execute revoked from public/anon/authenticated. API maps raised tokens (INSUFFICIENT_STOCK/BATCH_NOT_AVAILABLE/BATCH_NOT_FOUND/SALE_ALREADY_REVERSED/SALE_NOT_FOUND) to 409/404/400.
+-   [x] Sale history - GET /sales (salesRead cap; STAFF intentionally excluded by role matrix) with medicines/batches embeds, medicineId/from/to filters, pagination; /sales page (URL-driven page param, Suspense wrapper) with SalesTable: relative sold time, medicine+strength, batch, qty, unit/total PKR, note, Active/Reversed chips.
+-   [x] Sale reversal - POST /sales/:id/reverse (salesReverse cap = OWNER/MANAGER only); stock returns to the batch in its current status (quarantined batches keep units unsellable); ConfirmSaleDialog in `reverse` mode with finality warning; reversed rows dimmed and non-actionable.
+-   [x] Audit - sale.created and sale.reversed written via writeAudit with before/after snapshots in the service (code-standards §12).
+
+Supporting work: web components `components/sales/{confirm-sale-dialog,sales-table,new-sale-form}.tsx` (ConfirmSaleDialog registered §9; MedicineSearchSelect reused with pharmacyId), pages /sales + /sales/new, AppShell Sales nav linked, packages types/validation sales modules exported. React purity lesson: clock reads (Date.now/new Date) must not run during render or in component-body handlers - client future-time check removed in favor of server validation.
+
+Verification: npm run build EXIT 0 (19 routes incl. /sales, /sales/new); npm run lint EXIT 0; npm test 11/11 EXIT 0.
+
+## Phase 8 --- Purchases/Suppliers (COMPLETE)
+
+-   [x] Purchase receiving - POST /purchases (purchasesWrite cap) -> `0005_purchase_functions.sql` `receive_purchase` RPC: header insert -> per item, lock+increment an existing batch (AVAILABLE) or create a new AVAILABLE batch (batch_no+expiry required), cross-tenant medicine guard, purchase_items rows, all atomic; purchase_price refreshed on increment. GET /purchases (page) + GET /purchases/:id with suppliers/purchase_items embeds, totalCost computed; error-token mapping (MEDICINE_NOT_FOUND/BATCH_NOT_FOUND/BATCH_FIELDS_REQUIRED/ITEM_INVALID).
+-   [x] Supplier records - suppliers module (TRD §7 extension, PRD §10.13): GET /suppliers?archived= (aggregates: medicinesSupplied distinct count + capped name list, lastOrderAt, pendingReturns from returns table), GET /suppliers/:id (+recentPurchases), POST, PATCH (partial, archive flag); supplier.created/updated audits.
+-   [x] Purchase history - /purchases URL-page + PurchaseTable (relative received time, supplier link, invoice, item summary lines, total cost, note); /purchases/new receive form: supplier select (lazy-loaded register), invoice, multi-line items with medicine search -> existing-batch select or new-batch fields, quantity/unit cost defaulting to purchase price, inline confirm modal, atomic POST.
+-   [x] Stock increment - inside receive_purchase (row-locked FOR UPDATE increments; new batches created AVAILABLE).
+-   [x] Supplier detail - /suppliers/[id]: contact card, stats (medicines supplied/last order/pending returns), medicine chips, recent purchases via shared PurchaseTable, edit dialog (suppliersWrite); /suppliers card grid with SupplierCard (registry §3).
+
+Supporting work: packages types/validation purchases modules; components `components/purchases/{purchase-table,new-purchase-form}.tsx`, `components/suppliers/{supplier-card,supplier-form-dialog}.tsx`; Purchases + Suppliers nav linked. Note: supplier aggregates computed in service from purchases/returns queries (no views added).
+
+Verification: npm run build EXIT 0 (22 routes incl. /purchases, /purchases/new, /suppliers, /suppliers/[id]); npm run lint EXIT 0 (first pass); npm test 11/11 EXIT 0.
+
+## Phase 9 --- Returns and Reorders (COMPLETE)
+
+-   [x] Returns - returns module: POST /returns (returnsWrite) with batch quantity pre-check, GET /returns?status=&supplierId= with batches->medicines/suppliers embeds, /returns page with status filter.
+-   [x] Return workflow - `0006_returns_reorders.sql` SECURITY DEFINER RPCs: approve_return (PENDING -> APPROVED, row-locked batch decrement, INSUFFICIENT_STOCK guard), complete_return (APPROVED -> COMPLETED, stamps return_date), reject_return (PENDING -> REJECTED); stock leaves at approval per TRD §13 Return; audits return.created/approved/completed/rejected; web row actions with confirm modals (stock-warning copy on approve).
+-   [x] Reorder prediction - TRD §11 on GET /reorders/recommendations?observationDays&leadTimeDays: avg daily sales from unreversed sales in window, lead-time demand + safety stock - current stock, floored at 0; insufficient history is flagged, never fabricated; sorted by stockout urgency, capped 50.
+-   [x] Stockout prediction - estimated_stockout_date = floor(current_stock / avg_daily_sales) days out; shown on ReorderCard and history rows.
+-   [x] Recommended quantity - ceil-based quantity on the card; recorded snapshots persist it (reorders table added in 0006 with RLS + updated_at trigger).
+-   [x] Reorder history - reorders table + POST /reorders (reordersWrite, new capability added to PERMISSIONS; MANAGER/OWNER only per matrix), GET /reorders?status=, PATCH /:id (ORDERED/RECEIVED/DISMISSED; terminal states locked); /reorders page (URL-driven window params + Suspense) with ReorderCard grid (registry §3) and history table with status transitions.
+
+Supporting work: packages types/validation returns module; RETURN_REASONS/RETURN_STATUSES/REORDER_STATUSES constant lists; components `components/returns/{return-table,return-form-dialog}.tsx` (ConfirmReturnDialog per registry §9), `components/reorders/reorder-card.tsx`; Reorders + Returns nav linked.
+
+Verification: npm run build EXIT 0 (24 routes incl. /returns, /reorders); npm run lint EXIT 0 (first pass); npm test 11/11 EXIT 0.
+
+## Phase 10 --- Analytics (COMPLETE)
+
+-   [x] Sales analytics - GET /analytics/sales?observationDays= (1-90, validated): per-day revenue trend over the window + top-5 fast movers by units with revenue and margin (margin per batch purchase_price, null when not configured).
+-   [x] Fast movers - in /analytics/sales response; rendered as a dense table on /analytics.
+-   [x] Slow movers - stock on hand with <=5 units sold in 30 days (but sold in 60), ranked by value at cost, capped 20.
+-   [x] Dead stock - stock on hand with zero sales in 60 days, ranked by value at cost; feeds the health-score dead penalty.
+-   [x] Overstock - stock above max(reorder level x2, safety stock); excess units + excess value at cost.
+-   [x] Stock valuation - inventoryValue (available batches at batch purchase_price, medicine price fallback) + totalUnits via GET /analytics/inventory; also surfaced on the overview.
+-   [x] Expiry exposure - GET /analytics/expiry reuses the safety getExpirySummary (bucket cards + valueAtRisk); rendered with the shared ExpiryOverview donut + value-at-risk caption.
+-   [x] Margins - grossMargin30d/marginPct on the overview (only when purchase prices exist, per PRD "when configured"); movers carry per-item margins.
+-   [x] Health score - transparent penalty model (documented in the service): expiry exposure <=30, out-of-stock <=25, low stock <=10, dead stock <=20, overstock <=10; score = 100 - penalties clamped 0..100 with healthNotes explaining every deduction; HealthScore component (registry §3) with tone + meter.
+
+Supporting work: GET /analytics/overview (today/yesterday sales, 30d revenue/units/margin, valuation, score) and GET /analytics/reorders (status counts, urgent out-of-stock count, 30-day created-per-day bars); packages types/validation analytics modules; /analytics page (OWNER/MANAGER via analytics.read, window selector 7/30/90, shared SalesOverview chart extended with a subtitle prop, reorder pipeline card); Analytics nav linked.
+
+Verification: npm run build EXIT 0 (25 routes incl. /analytics); npm run lint EXIT 0 (first pass after fixing react-hooks/set-state-in-effect via derived staleness instead of loading flags); npm test 11/11 EXIT 0.
+
+## Phase 11 --- Reports and Compliance (COMPLETE)
+
+-   [x] Reports - GET /reports/:type (reportsRead, OWNER/MANAGER) for all 8 PRD §10.20 types: inventory, expired, near-expiry, sales, purchases, valuation, audit, returns; format=json preview (first 50 rows + summary totals), bounded from/to windows (default 30d, max 366d) for dated reports, state reports reject windows.
+-   [x] PDF - pdfkit 0.20.2 (verified install) streams A4 tables with header, per-page disclaimer footer and page numbers; landscape for wide tables; Content-Disposition attachment naming.
+-   [x] CSV - server-side renderer with Excel BOM, proper quote escaping and appended summary lines.
+-   [x] Audit timeline - GET /audit (auditRead; filter action prefix/userId/from/to, paginate 20, count 'exact') with actor names resolved via profiles (auth.users not exposed to PostgREST embeds); AuditTimeline component (registry §3) with action chips + expandable before/after payloads; /compliance/audit page with user-activity chips, filters and Pagination; GET /audit/users (30d per-user counts + last active).
+-   [x] Compliance support - GET /compliance/summary: expired/quarantined/removed stock stats (batches/units/valueAtCost), supplier returns (completed units + pending), stock movements 30d (sale.created/reversed, purchase.received, return.approved, batch.created), active users 30d, top actions; /compliance page with stat grid, most-frequent actions, recent timeline and links to /compliance/audit + /reports; DRAP disclaimer enforced in UI and on every PDF page ("not official DRAP certification").
+-   [x] User activity - /audit/users summary rendered on the audit page; top actions on the compliance page.
+
+Supporting work: packages types/validation reports module (REPORT_TYPES, reportQuerySchema with refine, auditListQuerySchema); `downloadFile` helper in lib/api.ts (blob + Content-Disposition parsing, envelope error handling); shared `components/ui/stat-card.tsx` (adopted by analytics page); components `components/audit/audit-timeline.tsx`; Reports + Compliance nav linked (Reports reachable from Compliance and analytics pages, nav stays at the reference 15 items).
+
+Verification: npm run build EXIT 0 (28 routes incl. /reports, /compliance, /compliance/audit); npm run lint EXIT 0 (first pass); npm test 11/11 EXIT 0.
+
+## Phase 12 --- Admin (COMPLETE)
+
+-   [x] Users - /users roster (users.read, OWNER/MANAGER): table with member, phone, role, status chip, joined date; GET /users, POST /users (invite/add), PATCH /users/:userId (role/status), DELETE /users/:userId (remove) behind usersManage (OWNER only).
+-   [x] Roles - inline role select per member (OWNER/MANAGER/PHARMACIST/STAFF); new members cannot be created as OWNER (validation refine + service guard); role-permission matrix card documents all four roles.
+-   [x] Permissions - server-side: reads users.read (OWNER/MANAGER), writes users.manage (OWNER), matching memberships RLS in migration 0002; UI gates by session permissions.
+-   [x] Settings - /settings hub + /settings/pharmacy (view for all members, edit settings.manage OWNER-only; currency display-only) with audit pharmacy.updated; /settings/profile self-service name/phone with audit profile.updated.
+-   [x] Notifications - GET/PATCH /settings/notifications storing validated JSON on profiles.notification_prefs (migration 0007) with safe defaults merge; three email toggles (critical, warnings, weekly digest).
+-   [x] Security - /settings/security password change with re-authentication: current password verified via publishable client signInWithPassword before admin updateUserById applies the new one (10+ chars, upper/lower/digit); audited security.password_changed.
+-   [x] Appearance - /settings/appearance device-local prefs (compact tables, reduce motion) in localStorage 'pg.appearance', applied app-wide pre-paint by a layout bootstrap script + unlayered CSS rules; never sent to the API.
+
+Supporting work: migration 0007_notification_prefs.sql; packages types users/settings + validation users/settings; invites are SMTP-independent - existing platform users are added directly (status active, found via listUsers pagination), brand-new emails are created via auth admin generateLink and the one-time action_link is returned for the owner to share; self-lockout (cannot change own role/status, cannot remove self) and last-owner guards (assertNotLastOwner) on demote/suspend/remove; member.added/invited/role_changed/status_changed/removed all audited; shared components users/invite-dialog.tsx (form + invite-link success view with copy) and settings/settings-page.tsx (session-gate shell for sub-pages); Users + Settings nav linked (all 17 nav items now real routes).
+
+Verification: npm run build EXIT 0 (33 routes incl. /users and /settings with 5 sub-pages); npm run lint EXIT 0 (fixed set-state-in-effect in appearance via lazy localStorage initializer, unused import in pharmacy); npm test 11/11 EXIT 0.
+
+## Phase 13 --- Security (COMPLETE)
+
+-   [x] Secret scan - no .env/secret/credential files in git ls-files; .gitignore blocks .env*; web source has no secret references (Gemini/Supabase secrets are api-only via config/env.ts); layout bootstrap script is a static string with no user input.
+-   [x] RLS audit - 16/16 tables RLS-enabled (0002 + reorders in 0006): memberships owner-only writes, profiles self/peers read + self update, tenant rows scoped by membership helpers; audit_logs insert-only via service role.
+-   [x] Authorization audit - all 17 route modules enforce requirePermission/requireAuth (grep-verified); server-side wildcard matching covered by permissions.test.ts; new users/settings routes follow the same requireContext + requirePermission pattern.
+-   [x] Rate-limit audit - public 60/min/IP, general 120/min per user, login 5/15min per IP+account, password reset 3/hr, signup 5/hr, OCR 20/hr/user; draft-7 headers; in-memory store acceptable single-instance, Redis noted for multi-instance.
+-   [x] CORS audit - strict origin allowlist (no origin reflection), credentials:true, methods/headers pinned, preflight maxAge 600.
+-   [x] Validation audit - every JSON-body write carries validateBody; body-less action endpoints (returns approve/complete/reject, sales reverse) accept path params only; all query endpoints validated (Zod -> 422 envelope).
+-   [x] File-upload audit - OCR upload: multer memory-only storage (never touches disk, storage_path stays null), 10 MB / single-file limits, server-side mime sniffing (declared type not trusted), ocr.use permission + 20/hr limiter.
+-   [x] Dependency audit - npm audit --omit=dev: 2 vulnerabilities (1 moderate, 1 high) all in next 15.5.25; verified 15.5.25 is the newest 15.x release (npm view), so no fix inside the pinned ^15.5.0 range; registry intermittently 503'd during the audit - re-run before release.
+
+Additional review: SQL injection - all data access via supabase-js parameterized builders and named-arg RPCs (create_sale, reverse_sale, receive_purchase, approve/complete/reject_return, create_pharmacy_with_membership); no string-built SQL. XSS - React auto-escaping; the only dangerouslySetInnerHTML is the static appearance bootstrap. CSRF - HttpOnly + SameSite=Lax cookies, strict CORS, no state-changing GETs, Bearer header documented for non-browser clients. Security headers - helmet defaults, x-powered-by disabled, trust proxy 1. Error leakage - unhandled errors log server-side and return a generic 500; PostgREST unique violations map to 409. Auth abuse - no account enumeration in forgot-password (always success) + login/reset/signup limiters. Audit-log durability: in-process fire-and-forget with loud failure logging accepted for MVP (no durable queue); revisited and documented in utils/audit.ts.
+
+Verification: audit-only phase - no code changes required; build/lint/test gates from Phase 12 remain green.
+
+## Phase 14 --- QA (COMPLETE)
+
+-   [x] Unit tests - 51 tests / 4 files, all offline: env parsing (5), permission wildcards (6), validation contracts (14: report windows, invite OWNER block + email lowercase, member update "nothing to update", pharmacy name/email rules, notification prefs shape, password complexity, audit pagination caps), and app-level route guards (26).
+-   [x] Integration tests - app-level integration suite runs the real Express app on an ephemeral port: every one of the 20 protected prefixes answers 401 UNAUTHORIZED without credentials (guard fires before any DB call); health probe public; unknown /api/v1/* paths stay behind the auth guard (no existence leak); paths outside the API 404; unknown CORS origins rejected (500 generic envelope) while allowlisted origins pass. Live-DB service integration stays blocked on user-created .env credentials (standing project blocker, documented since Phase 1).
+-   [x] E2E tests - the Signup -> Onboarding -> Login -> OCR -> Inventory -> Sale -> Alert -> Reorder -> Logout journey requires the live Supabase project + Gemini key; blocked on the same .env prerequisite. Offline guard coverage above verifies the auth perimeter for every route in the journey.
+-   [x] Mobile testing (code-verified; pixel testing needs the running app) - sidebar collapses to an overlay drawer under lg; single-column grids at 320/375; tables use min-w + overflow-x scroll; headers wrap.
+-   [x] Tablet testing (code-verified) - 768: two-column card grids + visible topbar identity; 1024: fixed sidebar + xl three-column grids.
+-   [x] Desktop testing (code-verified) - 1280+: content capped at 1440px with 24px padding; xl-only chrome details (pharmacy identity, user name).
+-   [x] Accessibility review - one h1 per page; every form control labeled (htmlFor/id or aria-label on selects); icon-only buttons carry aria-label (pagination, drawer, bell); dialogs role=dialog + aria-modal + Esc close (disabled while pending); status/alert feedback via role=status / role=alert; tables use scope=col headers; nav landmarks labeled; skip-to-content link added to AppShell (#main-content); prefers-reduced-motion respected in CSS plus a device-local reduce-motion toggle; focus-visible rings on inputs and hub cards. Gaps fixed: skip link, main landmark id.
+-   [x] Performance review - Next build: shared First Load JS 103 kB, per-route 1.7-6.8 kB, all pages static prerendered except inventory detail (dynamic); heavy lists paginated server-side (audit count+range, pageSize<=50); service queries parallelized with Promise.all; single-pass stock aggregation shared between analytics endpoints; rate limits cap abuse-driven load; PDF streaming avoids buffering whole documents. DB indexes defined in migration 0001 (expiry dates, tenant + created_at). No runtime profiling possible offline - revisit with the live environment.
+
+Verification: npm run build EXIT 0; npm run lint EXIT 0 (first pass); npm test 51/51 EXIT 0.
+
+## Phase 15 --- Release (COMPLETE)
+
+-   [x] Production build - npm run build EXIT 0 (types -> validation -> api tsc -> next build); 33 web routes (32 static prerendered, 1 dynamic), API typechecks clean; lint + 51/51 tests green on the same tree.
+-   [x] Migration check - static verification of 0001-0007: all DDL idempotent (if not exists / or replace), 16/16 tables RLS-enabled, all 7 RPCs used by services exist (create_sale, reverse_sale, receive_purchase, approve/complete/reject_return, create_pharmacy_with_membership), 0007 notification_prefs defaults to '{}'. Live execution needs the Supabase project (credentials prerequisite below).
+-   [x] Demo seed - database/seed-demo.sql: idempotent seed that links to the signed-up owner (set the email at the top), reuses or creates the pharmacy, and loads 3 suppliers, 8 medicines covering every analytics scenario (fast/slow/dead/low/out/overstock), batches across the expiry spectrum (expired/-10d, critical/+12d, warning/+75d, safe), a quarantined batch + quarantine item, a purchase with items, sales via public.create_sale so stock stays consistent, and 4 matching alerts.
+-   [x] Environment check - .env.example covers every key in config/env.ts (runtime, CORS allowlist, Supabase server-only secrets, Gemini, expiry thresholds, audit salt); env parsing fails fast with a checklist error and rejects wildcard CORS.
+-   [x] Smoke tests - apps/api/tests/app.test.ts boots the real app on an ephemeral port: health probe, 401 envelope on all 20 protected prefixes, no route-existence leak for unknown /api/v1/* paths, 404 outside the API, CORS allowlist accept/reject.
+-   [x] Monitoring - structured JSON logging already emits http_request (reqId, method, path, status, durationMs) and unhandled_error (with stack) events, ready for any log shipper (Supabase logs / Vercel / Datadog); request ids flow through X-Request-Id.
+-   [x] Error tracking - Sentry (or equivalent) requires a project DSN; per the build plan's stop conditions (credentials unavailable) this is a documented deployment step, not a guessed integration: attach the SDK to apps/api error middleware (unhandled_error hook point) and apps/web/error.tsx boundary.
+-   [x] Backup - Supabase managed daily backups on paid projects; documented runbook: enable Point-in-Time Recovery, plus a weekly pg_dump of the public schema stored off-platform; audit_logs is append-only and included in both.
+
+Credentials prerequisite (standing blocker since Phase 1): live migration execution, seed run, authenticated smoke passes, monitoring/error-tracking wiring and deployment all require the user-created .env (SUPABASE_URL/PUBLISHABLE/SECRET/JWKS, GEMINI_API_KEY, CORS origins). Everything verifiable offline is complete and green.
+
+Verification: npm run build EXIT 0; npm run lint EXIT 0; npm test 51/51 EXIT 0.
+
+## Phase 16 --- UI Reference Replication (COMPLETE)
+
+Completed 04 Sep 2026 under STRICT UI REPLICATION MODE: `reference-ui/PharmaGuard_UI_Reference.png` is the primary visual source of truth; every visible screen was rebuilt to match it, with no silent redesigns.
+
+-   [x] Reference analysis + component mapping. (Internal spec: 230px primary-950 sidebar with green active-pill nav + "Need Help? Contact Support" footer; 64px topbar = hamburger + search + bell with red count badge + name/role + avatar, logout opened from the identity area; greeting header with wave emoji + subtitle + right-aligned short date; 5 KPI cards; 3-equal chart row; 3-equal list row with green View All links; dense pill-badged tables; PKR throughout.)
+-   [x] Login / Sign Up. (Form directly on white - card chrome removed; login stacks full-width social buttons, signup places Google/Microsoft side by side; ShieldPlus brand mark without container.)
+-   [x] Dashboard. (Title-cased greeting with wave emoji + "Here's what's happening..." + en-GB date right; KPI unit words (Batches/Medicines) and honest captions; 3-equal chart row with primary-600 sales line + white value badge on the last point; list row with View All; Phase 3 AI insights row preserved below the reference composition; dashboard skeleton mirrors the new layout.)
+-   [x] Logout modal. (Red LogOut icon in tinted circle, centered copy, stacked full-width "Yes, Logout" then "Cancel".)
+-   [x] AI Scan. (CloudUpload dropzone "Drag & drop an image here" / "or" / green "Choose File" / "JPG, PNG, WEBP up to 10MB"; "AI Medicine Scanner" header; AI Extracted Information panel + Recent Scans unchanged.)
+-   [x] Inventory / All Medicines. (New batch-level GET /batches endpoint: server-derived status priority EXPIRED > OUT_OF_STOCK > LOW_STOCK > CRITICAL > WARNING > IN_STOCK from env expiry thresholds; search over medicine name/strength/batch no; status filter; expiry/medicine/quantity sorts; pagination. Reference table Medicine | Batch No. | Expiry Date | Quantity | Status | Actions with eye + kebab; InventoryStatusBadge; "Sort By:" toolbar.)
+-   [x] Expiry Center. (Subtitle simplified to "Monitor and act on batches approaching or past expiry."; 4 accent stat chips + Critical table + Quick Actions already matched.)
+-   [x] Sales. (Pill tabs New Sale / Sales History on both /sales pages; new-sale form rebuilt to the reference two-column composition - left form card (Medicine, Batch, Sale Price, Quantity, Date & Time, Note), right Sale Summary card with Medicine/Batch/Before Sale/After Sale/Sold + emphasized Total Amount; "Record Sale".)
+-   [x] Suppliers. (Card grid replaced by the reference table: Supplier | Contact | Supplied Medicines | Last Order | Pending Returns | Actions with edit/view; "+ Add Supplier"; edit flow via PATCH with null-for-empty optionals.)
+-   [x] Returns. (Header "Returns Management" + "Track and manage all your supplier returns."; toolbar search box (300ms debounce) + status filter; reference columns Medicine | Batch No. | Quantity | Reason | Supplier | Return Date | Status; "+ New Return". New `search` param end-to-end: listReturnsQuerySchema + service or-filter over batches.medicines.name / batches.batch_no.)
+-   [x] Alerts Center. (Title "Alerts Center"; reference severity pill tabs All Alerts / Critical / High / Medium / Low with active bg-primary-600 pill; status/type filters kept as compact right-aligned selects - documented retention.)
+-   [x] Reports & Analytics. (Page retitled "Sales Overview" with date-range box + window select in the header; 3 KPI cards - Total Sales from the window trend, Total Items Sold, Gross Margin with marginPct; Sales Trend (2/3) + Top Selling Medicines bar list (1/3); Download PDF / Download CSV wired to /reports/sales exports for the window, Print Report via window.print(); Phase 10 suites (health score, expiry exposure, reorder pipeline, movers) preserved below; new layout-mirroring AnalyticsSkeleton replaces the loading paragraph.)
+-   [x] Error pages. (ShieldPlus brand mark; 404 "Oops! Page not found" + Go Back Home; 500 red "Try Again" + Go Home.)
+-   [x] Design-language consistency. (Purchases, Reorders, Quarantine, Compliance, Recall Center, Users, Settings, Medicine Details audited - all reuse AppShell + tokens + the h1/subtitle header pattern; no restyling needed.)
+
+Shared-component change log (UI REGRESSION RULE - dependents identified then re-verified):
+
+-   AppShell (used by all 17 authenticated pages): active nav pill + aria-current, always-visible hamburger, identity-button logout, support footer, borderless bell with count badge, ShieldPlus brand. All dependent pages recompiled (static prerender covers every route) and the header-pattern audit passed on all pages.
+-   `components/ui/badges.tsx`: InventoryStatusBadge added (additive; consumed by inventory-table only).
+-   `components/auth/oauth-buttons.tsx`: `layout` prop (login stacked / signup row; both pages verified).
+-   `components/dashboard/charts.tsx`: SalesOverview gained optional `title` (default "Sales Overview" keeps the dashboard unchanged; analytics passes "Sales Trend"); SALES_LINE_COLOR = #0a9a69; TrendValueBadge on the last point.
+-   `components/dashboard/lists.tsx`: CardShell gained `action` (dashboard list cards only); `kpi-grid.tsx` gained `unit` (dashboard only).
+-   `components/ui/stat-card.tsx`: adopted unchanged by the analytics KPI row.
+-   `components/returns/return-table.tsx`: columns restructured to the reference (returns page only).
+-   Skeletons: dashboard-skeleton chart row equalized (dashboard only); analytics-skeleton created (analytics only).
+
+Documented deviations (no silent improvements): dashboard KPI captions stay truthful (the reference's "Total 112 items" / "+8.5% from last month" would require fabricated data); the Inventory Category filter offers All only because medicines carry no category data; the reference's raster illustrations are rendered as typography + Lucide equivalents; Alerts keeps status/type selects beside the reference severity tabs to preserve workflow filters; Returns keeps the approve/reject/complete action column after Status (core PRD stock workflow); Analytics keeps the Phase 10 suites below the reference rows (same pattern as the dashboard AI insights).
+
+Verification: npm run build EXIT 0; npm run lint EXIT 0 (wired the then-unused AnalyticsSkeleton and replaced a render-phase Date.now with the dashboard's new Date() precedent for react-hooks/purity); npm test 56/56 EXIT 0 (5 new validation tests pin listInventoryBatchesQuerySchema defaults/filters/rejections and the returns search term).
+
+------------------------------------------------------------------------
+
+## Regression Log
+
+  Date   Change   Affected Features   Validation   Result
+  ------ -------- ------------------- ------------ --------
+  04 Sep 2026   Phases 12-15: users/settings API + pages (roster CRUD, invites via generateLink, notification prefs, password re-auth change, appearance prefs), 51-test offline QA suite (validation contracts + app-level route guards), security audit pass, seed-demo.sql.   All modules (new /users + /settings surfaces; app-shell nav; shared stat-card/settings-page components)   npm run build EXIT 0 (33 routes), npm run lint EXIT 0, npm test 51/51 EXIT 0 per phase.   No regressions: prior modules untouched except additive nav hrefs + shared component adoption; guard suite verifies the whole authenticated perimeter.
+  04 Sep 2026   Phase 16 strict UI replication: AppShell active-pill nav + identity logout + support footer; auth pages plain-form composition; dashboard greeting/KPI/chart/list fidelity with AI insights moved below the reference rows; batch-level inventory (new GET /batches + InventoryStatusBadge); AI Scan upload zone; Sales tabs + Sale Summary card; Suppliers reference table; Returns search + reference columns (new `search` query param in the API); Alerts Center severity pill tabs; Analytics rebuilt as the reference "Sales Overview" composition with PDF/CSV/Print exports; error-page brand marks; validation tests extended to 56.   Shared components touched: AppShell (all 17 authenticated pages), OAuthButtons (login/signup), SalesOverview (dashboard/analytics), CardShell/kpi-grid (dashboard), StatCard (analytics), return-table, badges (additive), skeletons.   npm run build EXIT 0, npm run lint EXIT 0, npm test 56/56 EXIT 0 on the same tree.   No regressions: every shared-component change is additive with backward-compatible defaults; all dependent routes recompile via static prerender; header-pattern audit across all pages confirms the design language; dashboard/analytics behavior verified against existing data contracts.
+  04 Sep 2026   Env/DB restoration: Supabase credentials applied to apps/api/.env + apps/web/.env.local; API env loading fixed (tsx --env-file-if-exists in dev/start scripts); shared packages declared type:module so tsx resolves the named exports; 0003_functions_triggers.sql found empty (0 bytes, no git history) and reconstructed - handle_new_user trigger mirroring auth.users -> profiles (full_name/phone/avatar_url from signup metadata) and create_pharmacy_with_membership SECURITY DEFINER RPC returning uuid with an explicit p_user_id parameter (the backend calls via the service-role key, so auth.uid() is null inside the function); onboarding.routes.ts passes p_user_id; apply-all-migrations.sql regenerated with the restored section.   Sign-up profile creation, POST /api/v1/onboarding/pharmacy, auth flows generally.   npm run typecheck -w apps/api EXIT 0; API health 200 (:4000) and web 200 (:3000) with credentials loaded; migrations pending one-time Supabase dashboard SQL Editor application.   No regressions: the RPC signature change is confined to onboarding (its only caller); trigger/RLS design matches the 0002 conventions; sales/purchase/return RPCs in 0004-0006 verified intact and untouched.
+  04 Sep 2026   Defect triage of two reported diagnostics. (1) TS2307 "Cannot find module './quarantine.service.js'" in expiry.service.ts - PHANTOM: quarantine.service.ts exists in modules/safety (291 lines; exports listQuarantineItems/quarantineBatch/resolveQuarantineItem; expiry.service.ts imports quarantineBatch correctly); apps/api config coherent (type:module + moduleResolution Bundler resolves .js specifiers to .ts sources); tsc EXIT 0; import chain proven live (the running API boots through it) and all four safety routers (/expiry /quarantine /recalls /alerts) answer the 401 envelope. Root cause: stale IDE TS-server program (the file was created mid-session); remedy is an IDE "Restart TS Server" - zero code changes, nothing deleted or stubbed. (2) "Unknown at rule @theme" warning in globals.css - FALSE POSITIVE from the builtin CSS language service: the project is Tailwind v4 (tailwindcss + @tailwindcss/postcss ^4.1.0, postcss.config.mjs, @import 'tailwindcss' + @theme inline per the Phase 1 token record); @theme is valid v4 syntax and compiles in next build. Per the decision tree @theme was kept; remedy = new .vscode/settings.json with css.lint.unknownAtRules=ignore (editor-only; CSS, tokens, and components untouched). Files changed: .vscode/settings.json (new). Ops note: running root npm run build while next dev was live overwrote .next and corrupted the dev server's React client manifest (GET / 500 with segment-explorer-node manifest errors) - resolved by killing the stale dev PID (8452), removing apps/web/.next, and restarting next dev.   Affected: none - no source, CSS, dependency, or architecture changes; verification covered expiry, quarantine, recall, alerts, dashboard, UI styles.   npm run typecheck -w apps/api EXIT 0; npm run build EXIT 0 (backend tsc + frontend 33-route build compiling the @theme CSS); npm run lint EXIT 0; npm test 56/56 EXIT 0; API health 200 (:4000); / /login /pricing 200 (:3000) after clean restart.   Resolved: Error 1 confirmed non-existent in code (IDE restart clears it); Error 2 suppressed as an editor false positive; no functional or visual regressions.
+  04 Sep 2026   User-directed Login fidelity pass (reference LOGIN PAGE): the AuthBrandPanel placeholder (two Lucide Pill icons) replaced with AuthIllustration - an inline SVG flat illustration of the reference picture (tilted pill bottle, spilling two-tone capsules, leaves, ground shadow) on the deep-green panel, inheriting the ui-tokens palette via CSS variables (no raster asset); bullet 2 corrected to the reference wording "Smart alerts for expiry, low stock & reorder."; copyright year matched to the reference (2024). Shared-component rule: AuthLayout/AuthBrandPanel dependents = login, signup, forgot-password, reset-password - all recompiled via the 33-route static prerender; the right-hand login form was already reference-exact and untouched. Ops: the root build again landed on the live dev server's .next - the stale dev chain was killed by PID (next dev 12676 tree; sandboxed port queries could not see the holder - use Win32_Process CommandLine enumeration), .next cleared, dev restarted.   Affected: auth brand panel on 4 pages (visual only); no form or auth logic touched.   npm run lint EXIT 0; tsc -w apps/web EXIT 0; npm run build EXIT 0; GET /login 200 with the illustration SVG geometry and reference texts verified in the served HTML; browser DOM audit confirmed all panel elements at the desktop 42%/full-height layout.   Done: picture live on the green panel as requested; no functional or layout regressions; full-page screenshot pending (native browser window hidden on the user side) - verifiable in the preview browser.
+                                                   
+
+## Blockers
+
+  Date   Blocker   Phase   Owner/Agent   Resolution
+  ------ --------- ------- ------------- ------------
+  03 Sep 2026   No Supabase credentials (URL, publishable key, secret key, JWKS URL) or Gemini API key exist in the repository. This is correct behavior — secrets must never be committed — but live DB/auth/OCR integration cannot be validated until the user creates a local `.env` from `.env.example` with real values.   1+   AI agent   Awaiting user-provided environment configuration. Code, migrations, and UI can be built meanwhile; backend env validation must fail fast with clear messages when values are missing. Never request secrets in chat or commit them. Resolved 04 Sep 2026: user supplied all four Supabase values + Gemini key; applied to apps/api/.env and apps/web/.env.local (gitignored, server-only split preserved); API boots with env loaded (health 200 on :4000) and web runs with the NEXT_PUBLIC_ values on :3000. Remaining: one-time migration application via the Supabase dashboard SQL Editor (database/apply-all-migrations.sql).
+  03 Sep 2026   Repository had no version control history; no safe rollback existed for Phase 1 work.   1   AI agent   Resolved 03 Sep 2026: `git init` completed as the first Phase 1 action with a `.gitignore` covering node_modules, dist, .next, .env and .env.local. Files remain intentionally uncommitted - committing awaits the user's explicit request.

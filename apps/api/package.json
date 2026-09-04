@@ -1,0 +1,39 @@
+{
+  "name": "@pharmaguard/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PharmaGuard backend API (Node.js + Express + TypeScript)",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
+    "start": "tsx --env-file-if-exists=.env src/server.ts",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "2.21.0",
+    "@pharmaguard/types": "*",
+    "@pharmaguard/validation": "*",
+    "@supabase/supabase-js": "^2.114.0",
+    "@types/pdfkit": "^0.17.6",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "express-rate-limit": "^7.5.0",
+    "file-type": "22.0.2",
+    "helmet": "^8.0.0",
+    "jose": "^6.0.0",
+    "multer": "2.3.0",
+    "pdfkit": "^0.20.2",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/multer": "2.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

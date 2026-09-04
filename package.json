@@ -1,0 +1,30 @@
+{
+  "name": "pharmaguard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PharmaGuard - web-only, multi-tenant pharmacy expiry, inventory, safety-support and compliance SaaS",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w packages/types && npm run build -w packages/validation && npm run build -w apps/api && npm run build -w apps/web",
+    "typecheck": "npm run typecheck -w packages/types && npm run typecheck -w packages/validation && npm run typecheck -w apps/api && npm run typecheck -w apps/web",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.4",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^3.0.0"
+  }
+}
