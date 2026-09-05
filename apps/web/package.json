@@ -5,6 +5,7 @@
   "description": "PharmaGuard web frontend (Next.js + React + TypeScript)",
   "scripts": {
     "dev": "next dev -p 3000",
+    "prebuild": "tsc -p ../../packages/types/tsconfig.json && tsc -p ../../packages/validation/tsconfig.json",
     "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit"

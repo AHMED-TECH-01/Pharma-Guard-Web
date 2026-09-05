@@ -23,12 +23,14 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
     setFieldErrors({});
+    setNeedsVerification(false);
 
     const parsed = loginFormSchema.safeParse({ email, password, remember });
     if (!parsed.success) {
@@ -47,6 +49,13 @@ export default function LoginPage() {
           ? cause.message
           : 'Something went wrong. Please try again.',
       );
+      // The API maps Supabase's email_not_confirmed to this exact message.
+      if (
+        cause instanceof ApiClientError &&
+        cause.message === 'Please verify your email address before signing in'
+      ) {
+        setNeedsVerification(true);
+      }
       setSubmitting(false);
     }
   }
@@ -112,6 +121,18 @@ export default function LoginPage() {
           </div>
 
           {formError ? <AuthError message={formError} /> : null}
+
+          {needsVerification ? (
+            <p className="text-center text-sm text-text-muted">
+              Didn&apos;t get the code?{' '}
+              <Link
+                href={`/verify-email?email=${encodeURIComponent(email)}`}
+                className="font-medium text-primary-700 transition-colors duration-150 hover:text-primary-800"
+              >
+                Verify your email
+              </Link>
+            </p>
+          ) : null}
 
           <button
             type="submit"

@@ -1,9 +1,21 @@
+'use client';
+
+import { useState } from 'react';
+import { createBrowserSupabase } from '@/lib/supabase';
+import { AuthError } from './auth-error';
+
 /**
- * OAuthButtons (ui-registry §5): Google / Microsoft sign-in placeholders
- * (PRD §10.2 "OAuth placeholders if configured"). No OAuth provider is
- * configured yet, so the buttons are rendered disabled with an explanation
- * instead of pretending to work.
+ * OAuthButtons (ui-registry §5): Google / Microsoft sign-in via Supabase
+ * Auth OAuth (PRD §10.2). The browser is redirected to the provider and
+ * returns to /auth/callback, which exchanges the PKCE code and hands the
+ * session to the backend. Provider-side failures (e.g. the provider not
+ * being enabled in the Supabase dashboard yet) surface as a calm,
+ * actionable AuthError - never raw provider errors (ui-rules §13).
  */
+
+type OAuthProvider = 'google' | 'azure';
+
+const OAUTH_CALLBACK_PATH = '/auth/callback';
 
 function GoogleMark() {
   return (
@@ -47,8 +59,32 @@ interface OAuthButtonsProps {
   layout?: 'stacked' | 'row';
 }
 
-export function OAuthButtons({ action, disabled = true, layout = 'stacked' }: OAuthButtonsProps) {
-  const title = 'OAuth sign-in is not configured yet';
+export function OAuthButtons({ action, disabled = false, layout = 'stacked' }: OAuthButtonsProps) {
+  const [pending, setPending] = useState<OAuthProvider | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSignIn(provider: OAuthProvider) {
+    if (pending !== null) {
+      return; // prevent duplicate submissions
+    }
+    setError(null);
+    setPending(provider);
+    try {
+      // Redirects the browser to the provider; when the redirect succeeds
+      // this page unloads and the flow continues on /auth/callback.
+      const { error: oauthError } = await createBrowserSupabase().auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}${OAUTH_CALLBACK_PATH}` },
+      });
+      if (oauthError) {
+        throw oauthError;
+      }
+    } catch {
+      setPending(null);
+      setError('Unable to sign in with this provider. Please try again.');
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3" aria-hidden>
@@ -63,23 +99,32 @@ export function OAuthButtons({ action, disabled = true, layout = 'stacked' }: OA
       >
         <button
           type="button"
-          disabled={disabled}
-          title={title}
+          disabled={disabled || pending !== null}
+          onClick={() => void handleSignIn('google')}
           className="flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
         >
           <GoogleMark />
-          {layout === 'row' ? 'Google' : `${action} with Google`}
+          {pending === 'google'
+            ? 'Connecting…'
+            : layout === 'row'
+              ? 'Google'
+              : `${action} with Google`}
         </button>
         <button
           type="button"
-          disabled={disabled}
-          title={title}
+          disabled={disabled || pending !== null}
+          onClick={() => void handleSignIn('azure')}
           className="flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
         >
           <MicrosoftMark />
-          {layout === 'row' ? 'Microsoft' : `${action} with Microsoft`}
+          {pending === 'azure'
+            ? 'Connecting…'
+            : layout === 'row'
+              ? 'Microsoft'
+              : `${action} with Microsoft`}
         </button>
       </div>
+      {error ? <AuthError message={error} /> : null}
     </div>
   );
 }

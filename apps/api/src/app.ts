@@ -56,13 +56,22 @@ export function createApp(): express.Express {
   // Public auth endpoints carry their own stricter limiters.
   api.use('/auth', authRouter);
 
+  // Onboarding: authenticated but intentionally without tenant context -
+  // creating the first pharmacy is how an active membership comes to exist,
+  // so resolvePharmacyContext (403 without one) must not guard this route.
+  const onboardingArea = Router();
+  onboardingArea.use(requireAuth, generalLimiter);
+  onboardingArea.use('/onboarding', onboardingRouter);
+  api.use(onboardingArea);
+
   // Authenticated area: session -> tenant context -> per-user rate limit.
   const protectedArea = Router();
   protectedArea.use(requireAuth, resolvePharmacyContext, generalLimiter);
-  protectedArea.use('/onboarding', onboardingRouter);
   protectedArea.use('/dashboard', dashboardRouter);
-  protectedArea.use('/medicines', inventoryRouter);
-  protectedArea.use('/batches', inventoryRouter);
+  // inventoryRouter defines full sub-paths ('/medicines', '/batches', ...),
+  // so it mounts once at the root - mounting it at '/medicines' produced
+  // double-prefixed paths (404 for the client's GET /medicines).
+  protectedArea.use('/', inventoryRouter);
   protectedArea.use('/ocr', ocrRouter);
   protectedArea.use('/expiry', expiryRouter);
   protectedArea.use('/alerts', alertsRouter);

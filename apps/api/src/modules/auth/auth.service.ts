@@ -135,6 +135,52 @@ export async function sendPasswordResetEmail(email: string): Promise<{ sent: tru
   return { sent: true };
 }
 
+/**
+ * Sends/resends the signup email-verification OTP through Supabase Auth.
+ * GoTrue generates, hashes, stores, expires (10 min), and rate-limits the
+ * code - this service never sees the OTP value. Failures are logged but not
+ * surfaced so the response cannot enumerate accounts.
+ */
+export async function sendVerificationEmail(email: string): Promise<void> {
+  const { error } = await getSupabaseAuth().auth.resend({
+    type: 'signup',
+    email,
+  });
+  if (error) {
+    logger.warn('verification_email_send_failed', { code: error.code ?? error.message });
+  }
+}
+
+export interface ExchangeSessionResult {
+  accessToken: string;
+  refreshToken: string;
+  user: AuthUserContext;
+}
+
+/**
+ * Completes a browser-side Supabase public auth operation (OAuth PKCE
+ * callback or signup OTP verification): the browser hands over the session
+ * it received from Supabase Auth, the access token is re-validated
+ * server-side, and the user context is loaded before any application
+ * session cookies are issued.
+ */
+export async function exchangeSession(input: {
+  accessToken: string;
+  refreshToken: string;
+}): Promise<ExchangeSessionResult> {
+  const { data, error } = await getSupabaseAuth().auth.getUser(input.accessToken);
+  if (error || !data.user) {
+    throw ApiError.unauthorized('Unable to complete sign-in. Please try again.');
+  }
+
+  const user = await loadUserContext(data.user.id, data.user.email ?? '');
+  return {
+    accessToken: input.accessToken,
+    refreshToken: input.refreshToken,
+    user,
+  };
+}
+
 export async function loadUserContext(
   userId: string,
   email: string,
@@ -150,11 +196,29 @@ export async function loadUserContext(
         .eq('user_id', userId),
     ]);
 
-  if (profileError || !profile) {
+  if (profileError) {
+    // PGRST116 = .single() matched no rows: the authenticated user genuinely
+    // has no profile row. Any other code is an infrastructure fault (missing
+    // grants, RLS, network) and must not be surfaced as "Account profile not
+    // found" - it needs a distinct bootstrap diagnosis (master spec §5).
+    if (profileError.code === 'PGRST116') {
+      throw ApiError.unauthorized('Account profile not found');
+    }
+    logger.error('profile_lookup_failed', {
+      code: profileError.code,
+      message: profileError.message,
+    });
+    throw ApiError.externalService('Profile service is unavailable');
+  }
+  if (!profile) {
     throw ApiError.unauthorized('Account profile not found');
   }
   if (membershipError) {
-    throw ApiError.internal('Unable to resolve memberships');
+    logger.error('membership_lookup_failed', {
+      code: membershipError.code,
+      message: membershipError.message,
+    });
+    throw ApiError.externalService('Unable to resolve memberships');
   }
 
   const memberships = (membershipRows ?? []).map((row): MembershipSummary => {

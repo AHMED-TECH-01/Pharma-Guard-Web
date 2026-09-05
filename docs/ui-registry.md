@@ -93,8 +93,9 @@ LoginForm
 SignupForm
 PasswordField
 PasswordStrength
-OAuthButtons
+OAuthButtons        Google/Microsoft via Supabase Auth (signInWithOAuth -> /auth/callback)
 AuthError
+OTPInput            6-digit verification code boxes (keyboard/paste/one-time-code)
 ```
 
 ------------------------------------------------------------------------
@@ -171,6 +172,8 @@ Destructive actions must use confirmation.
  /pricing
  /login
  /signup
+ /verify-email      6-digit email-OTP verification (signup completion)
+ /auth/callback     OAuth PKCE callback (provider return -> session exchange)
  /forgot-password
  /reset-password
 

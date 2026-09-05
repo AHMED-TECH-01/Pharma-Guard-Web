@@ -226,6 +226,31 @@ Supabase Auth can be used for:
 -   Session management.
 -   Password reset.
 -   Email verification.
+-   OAuth (Google, Microsoft/Azure) via provider configuration in the
+    Supabase dashboard.
+
+### Approved browser (public/auth) Supabase operations
+
+The browser Supabase client (publishable key, `persistSession: false`) is
+approved for these public auth operations only:
+
+-   Password-recovery PKCE exchange (reset password completion).
+-   OAuth `signInWithOAuth` redirect + PKCE `exchangeCodeForSession`
+    (callback page `/auth/callback`).
+-   Signup email-OTP `verifyOtp` (page `/verify-email`).
+
+In every case the resulting session is handed to the backend endpoint
+`POST /api/v1/auth/session`, which re-validates the access token with
+`auth.getUser()` server-side before issuing the HttpOnly application
+cookies. The browser never persists a Supabase session.
+
+### Email OTP ownership
+
+Verification codes are generated, hashed, stored, expired, and
+attempt-limited by GoTrue (Supabase Auth). The application stores no OTP
+data and requires no OTP table; branded delivery uses the Supabase Auth
+email template (see docs/auth-setup.md and
+docs/email-templates/confirm-signup.html).
 
 Every pharmacy-owned table must support tenant isolation.
 

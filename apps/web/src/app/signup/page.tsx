@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { CircleCheck } from 'lucide-react';
+import { MailCheck } from 'lucide-react';
 import { signupFormSchema, issuesToFieldErrors } from '@/lib/auth-forms';
 import { ApiClientError, api } from '@/lib/api';
 import { AuthLayout } from '@/components/auth/auth-layout';
@@ -69,20 +69,24 @@ export default function SignupPage() {
     return (
       <AuthLayout>
         <div className="text-center">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-status-safe-bg">
-            <CircleCheck className="size-6 text-status-safe-fg" aria-hidden />
+          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary-50">
+            <MailCheck className="size-6 text-primary-700" aria-hidden />
           </span>
-          <h1 className="mt-4 text-xl font-semibold tracking-tight">Account created</h1>
+          <h1 className="mt-4 text-xl font-semibold tracking-tight">Verify your email</h1>
           <p className="mt-2 text-sm leading-relaxed text-text-muted">
-            You can now sign in. If email verification is required for your account,
-            we&apos;ve sent you a link - confirm your email first, then sign in.
+            We sent a 6-digit verification code to{' '}
+            <span className="font-medium text-text">{email}</span>. Enter it to finish setting up
+            your pharmacy account.
           </p>
           <Link
-            href="/login"
+            href={`/verify-email?email=${encodeURIComponent(email)}`}
             className="mt-6 flex h-10 items-center justify-center rounded-md bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800"
           >
-            Go to sign in
+            Enter verification code
           </Link>
+          <p className="mt-4 text-xs text-text-muted">
+            Wrong address? Create the account again with a different email.
+          </p>
         </div>
       </AuthLayout>
     );

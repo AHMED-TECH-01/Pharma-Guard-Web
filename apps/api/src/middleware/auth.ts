@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { ACCESS_COOKIE } from '../config/cookies.js';
 import { getSupabaseAdmin } from '../database/supabase.js';
 import { ApiError } from '../utils/api-error.js';
+import { logger } from '../utils/logger.js';
 import { verifyAccessToken } from './token-verify.js';
 import type { MembershipSummary, RequestAuth } from '../types/request.js';
 
@@ -79,7 +80,20 @@ export async function requireAuth(
       .eq('id', payload.sub)
       .single();
 
-    if (profileError || !profile) {
+    if (profileError) {
+      // Distinguish a genuinely missing profile (PGRST116: no rows) from an
+      // infrastructure fault (missing grants, RLS, network) so the client sees
+      // an accurate bootstrap diagnosis instead of a blanket 401.
+      if (profileError.code === 'PGRST116') {
+        throw ApiError.unauthorized('Account profile not found');
+      }
+      logger.error('profile_lookup_failed', {
+        code: profileError.code,
+        message: profileError.message,
+      });
+      throw ApiError.externalService('Profile service is unavailable');
+    }
+    if (!profile) {
       throw ApiError.unauthorized('Account profile not found');
     }
 

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
   forgotPasswordSchema,
   loginSchema,
+  resendVerificationSchema,
+  sessionExchangeSchema,
   signupSchema,
 } from '@pharmaguard/validation';
 import { REFRESH_COOKIE } from '../../config/cookies.js';
@@ -11,17 +13,21 @@ import { getPermissionsForRole, PERMISSIONS } from '../../middleware/authorize.j
 import {
   loginLimiter,
   passwordResetLimiter,
+  sessionExchangeLimiter,
   signupLimiter,
+  verificationLimiter,
 } from '../../middleware/rate-limit.js';
 import { getValidatedBody, validateBody } from '../../middleware/validate.js';
 import { ApiError } from '../../utils/api-error.js';
 import { ok } from '../../utils/respond.js';
 import {
+  exchangeSession,
   loadUserContext,
   login,
   refreshSession,
   revokeSession,
   sendPasswordResetEmail,
+  sendVerificationEmail,
   signup,
 } from './auth.service.js';
 
@@ -31,6 +37,8 @@ import {
  *   POST /api/v1/auth/login
  *   POST /api/v1/auth/logout
  *   POST /api/v1/auth/forgot-password
+ *   POST /api/v1/auth/resend-verification
+ *   POST /api/v1/auth/session
  *   POST /api/v1/auth/refresh
  *   GET  /api/v1/auth/me
  */
@@ -44,6 +52,10 @@ authRouter.post(
     try {
       const input = getValidatedBody(req, signupSchema);
       const result = await signup(input);
+      // admin.createUser does not email; deliver the branded signup OTP now
+      // (GoTrue handles generation/hashing/expiry/rate limits). Failures are
+      // logged only - the response stays identical either way.
+      await sendVerificationEmail(input.email);
       ok(res, result, 201);
     } catch (error) {
       next(error);
@@ -61,6 +73,49 @@ authRouter.post(
       const result = await login(input);
       setAuthCookies(res, result.accessToken, result.refreshToken, input.remember ?? true);
       ok(res, { user: result.user });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+authRouter.post(
+  '/resend-verification',
+  verificationLimiter,
+  validateBody(resendVerificationSchema),
+  async (req, res, next) => {
+    try {
+      const input = getValidatedBody(req, resendVerificationSchema);
+      // Same response regardless of account state - no account enumeration.
+      await sendVerificationEmail(input.email);
+      ok(res, { sent: true });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+authRouter.post(
+  '/session',
+  sessionExchangeLimiter,
+  validateBody(sessionExchangeSchema),
+  async (req, res, next) => {
+    try {
+      // Completes OAuth PKCE callbacks and signup OTP verification: the
+      // browser finished a Supabase public auth operation and hands over the
+      // resulting session; exchangeSession re-validates the access token
+      // server-side before the application cookies are issued.
+      const input = getValidatedBody(req, sessionExchangeSchema);
+      const result = await exchangeSession(input);
+      setAuthCookies(res, result.accessToken, result.refreshToken, true);
+      const active = result.user.memberships.find((membership) => membership.status === 'active');
+      ok(res, {
+        user: result.user,
+        activePharmacy: active
+          ? { pharmacyId: active.pharmacyId, pharmacyName: active.pharmacyName, role: active.role }
+          : null,
+        permissions: active ? getPermissionsForRole(active.role) : [],
+      });
     } catch (error) {
       next(error);
     }

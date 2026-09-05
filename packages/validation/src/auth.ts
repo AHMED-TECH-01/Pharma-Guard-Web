@@ -32,6 +32,29 @@ export const resetPasswordSchema = z.object({
   password: passwordSchema,
 });
 
+/**
+ * Resend the signup email-verification OTP. Anti-enumeration: the route
+ * always answers the same regardless of account state.
+ */
+export const resendVerificationSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Must be a valid email address').max(255),
+});
+
+/**
+ * Session exchange (FR-001 upgrade: OAuth PKCE callback / signup OTP
+ * verification). The browser completes a Supabase public auth operation and
+ * hands the resulting session to the backend; the access token is
+ * re-validated server-side (never trusted from the client) before the
+ * HttpOnly application cookies are issued.
+ */
+export const sessionExchangeSchema = z.object({
+  accessToken: z.string().min(20, 'Access token is missing').max(4096),
+  // Supabase refresh tokens are opaque and currently ~12 chars (older projects
+  // issued ~40-char JWTs). A sanity floor only - the token itself is verified
+  // server-side (auth.getUser) before any cookie is issued.
+  refreshToken: z.string().min(6, 'Refresh token is missing').max(4096),
+});
+
 /** FR-002 Pharmacy Profile — created during onboarding. */
 export const createPharmacySchema = z.object({
   name: z
@@ -55,4 +78,6 @@ export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
+export type SessionExchangeInput = z.infer<typeof sessionExchangeSchema>;
 export type CreatePharmacyInput = z.infer<typeof createPharmacySchema>;

@@ -9,6 +9,8 @@ import type { Request } from 'express';
  *  - Login:                  5 attempts / 15 minutes / IP + account key
  *  - Password reset:         3 requests / hour / IP + email
  *  - Signup:                 5 requests / hour / IP
+ *  - Verification resend:    5 requests / hour / IP + email
+ *  - Session exchange:      10 requests / 15 minutes / IP
  *  - AI OCR (Phase 5):      20 requests / hour / user (plan-based later)
  *
  * NOTE: for multi-instance production deployments, replace the default
@@ -65,6 +67,12 @@ export const passwordResetLimiter = makeLimiter(60 * 60_000, 3, (req) =>
 );
 
 export const signupLimiter = makeLimiter(60 * 60_000, 5, (req) => `signup:${ipOf(req)}`);
+
+export const verificationLimiter = makeLimiter(60 * 60_000, 5, (req) =>
+  `verify:${ipOf(req)}:${accountKeyOf(req)}`,
+);
+
+export const sessionExchangeLimiter = makeLimiter(15 * 60_000, 10, ipOf);
 
 export const ocrLimiter = makeLimiter(60 * 60_000, 20, (req) =>
   req.auth ? `ocr:user:${req.auth.userId}` : `ocr:ip:${ipOf(req)}`,
