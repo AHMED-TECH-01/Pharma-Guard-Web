@@ -1,8 +1,18 @@
 # remember.md — PharmaGuard project memory
 
-Last updated: 05 Sep 2026 — Vercel/monorepo build failure root-caused and fixed (shared-package build ordering via prepare + prebuild). Authentication upgrade content below.
+Last updated: 06 Sep 2026 — Web deployed to Vercel production (project pharma-guard-web, https://pharma-guard-web.vercel.app) and visually verified. See the Vercel deployment section below.
 This file is a working memory of the auth implementation: architecture, parameters, routes, env NAMES only.
 No secrets, keys, or credentials are ever stored here.
+
+## Vercel deployment (Web)
+
+- Project: `ahmed-tech-01s-projects/pharma-guard-web` (prj_g0o7XbdCLdcelQsvHV69Zu0A7Ox6), connected to GitHub AHMED-TECH-01/Pharma-Guard-Web — pushes to main auto-deploy production.
+- Production URL: https://pharma-guard-web.vercel.app (aliased at deploy time; older per-deployment URLs like pharma-guard-web-api-fphb.vercel.app belong to the deleted broken projects and 404 with DEPLOYMENT_NOT_FOUND).
+- Required project settings: Root Directory = apps/web (dashboard-only setting), framework Next.js (auto-detected). With Root Directory set, Vercel installs ONLY the apps/web workspace tree (~101 packages), which lacks root-level devDependencies — fixed via `apps/web/vercel.json` `"installCommand": "cd ../.. && npm install"` (full root workspace install, ~611 packages incl. typescript/eslint/@types/node). Do not remove this override.
+- Environment variables (NAMES only): NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (Production set via CLI; Preview pending). NEXT_PUBLIC_API_URL is referenced by apps/web but intentionally NOT yet set — Phase 14 sets it to the deployed API URL after the API project exists, then Web redeploys.
+- Verification performed 06 Sep 2026: all routes 200 (/, /login, /signup, /dashboard, /inventory, /verify-email, /suppliers); CSS asset 200 (43,338 bytes, byte-identical to the local production build, Tailwind v4 tokens present); browser-verified /login and / visually styled with zero console errors/warnings and the stylesheet request 200.
+- CLI workflow that works: `npx vercel --prod --yes` from the REPO ROOT (uploads the whole monorepo; the project's Root Directory handles the rest). Deploying from apps/web alone uploads only that directory and breaks workspace install; vercel build --prebuilt fails on Windows (EPERM symlink for dynamic-route .func outputs — Windows needs Developer Mode for symlinks).
+- The three pre-existing broken projects (pharma-guard-web-api-fphb, pharma-guard-web, pharma-guard-web-web) were deleted from Vercel before 06 Sep; their GitHub deployment records remain on the repo but the deployments 404.
 
 ## Authentication architecture
 

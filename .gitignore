@@ -38,3 +38,8 @@ Thumbs.db
 # Supabase local
 supabase/.branches
 supabase/.temp
+.vercel
+.env*
+
+# Vercel CLI temp scripts (local deploy tooling)
+.vercel-tmp/
