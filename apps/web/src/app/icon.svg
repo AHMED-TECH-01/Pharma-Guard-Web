@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- PharmaGuard favicon: the BrandMark shield-and-cross on the primary-950
+       (#063f37) rounded square, matching the user-supplied logo reference. -->
+  <rect width="32" height="32" rx="7" fill="#063f37"/>
+  <g transform="translate(2.2 2.2) scale(1.15)">
+    <path d="M12 1.8 L20.2 5.2 V11.1 C20.2 16.7 16.7 20.9 12 22.4 C7.3 20.9 3.8 16.7 3.8 11.1 V5.2 Z" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round"/>
+    <rect x="10.75" y="7.2" width="2.5" height="8.6" rx="0.8" fill="#ffffff"/>
+    <rect x="7.7" y="10.35" width="8.6" height="2.5" rx="0.8" fill="#ffffff"/>
+  </g>
+</svg>

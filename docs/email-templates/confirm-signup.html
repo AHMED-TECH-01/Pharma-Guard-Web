@@ -6,42 +6,46 @@
   "Confirm signup"): paste this entire file into the source editor.
 
   Template variables supplied by GoTrue:
-    {{ .Token }}  - the 6-digit OTP (only used with "Confirm email" OTP flow)
-    {{ .SiteURL }} - the Site URL configured under Authentication -> URL
-                     Configuration. In production this must be the public
-                     HTTPS app origin, which also makes the logo URL
-                     production-safe (never file:// or localhost).
+    {{ .SiteURL }}   - the Site URL configured under Authentication -> URL
+                       Configuration. In production this must be the public
+                       HTTPS app origin, which also makes the logo URL
+                       production-safe (never file:// or localhost).
+    {{ .TokenHash }} - the single-use confirmation token hash; the CTA links
+                       to {{ .SiteURL }}/auth/confirm?token_hash=...&email=...
+                       where the app auto-verifies via supabase-js verifyOtp
+                       (type 'signup', snake_case token_hash).
+    {{ .Email }}     - the URL-escaped recipient address.
 
-  OTP behavior is owned by GoTrue: cryptographically random 6 digits,
-  hashed at rest, single-use, expires in 10 minutes (Authentication ->
-  Emails -> OTP expiry), attempt-limited, resend rate-limited.
+  This is the LINK flow (no 6-digit OTP): the button opens the app's
+  /auth/confirm landing page, which exchanges the token hash for a session.
 -->
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Verify your email - PharmaGuard</title>
+    <title>Confirm your email - PharmaGuard</title>
   </head>
   <body style="margin: 0; padding: 0; background-color: #f4f7f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
     <!-- Preheader: invisible preview text -->
     <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
-      Your PharmaGuard verification code is {{ .Token }}. It expires in 10 minutes.
+      Confirm your email address to activate your PharmaGuard account.
     </div>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f7f6; padding: 24px 12px;">
       <tr>
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px;">
-            <!-- Logo row -->
+            <!-- Logo row: the shield-and-cross mark on the brand's dark-green
+                 rounded square (public/brand/pharmaguard-shield.png) -->
             <tr>
               <td align="center" style="padding: 8px 0 20px 0;">
                 <img
-                  src="{{ .SiteURL }}/brand/pharmaguard-logo.png"
+                  src="{{ .SiteURL }}/brand/pharmaguard-shield.png"
                   width="44"
                   height="44"
                   alt="PharmaGuard"
-                  style="display: block; border: 0; width: 44px; height: 44px;"
+                  style="display: block; border: 0; outline: none; text-decoration: none; width: 44px; height: 44px; border-radius: 10px;"
                 />
               </td>
             </tr>
@@ -50,36 +54,45 @@
               <td style="background-color: #ffffff; border: 1px solid #e5eae8; border-radius: 12px; padding: 36px 40px;">
                 <!-- Heading -->
                 <h1 style="margin: 0 0 8px 0; font-size: 22px; line-height: 28px; font-weight: 700; color: #10201d; text-align: center;">
-                  Verify your email
+                  Confirm your email
                 </h1>
                 <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 24px; color: #4b5f5a; text-align: center;">
                   Welcome to PharmaGuard.
                 </p>
-                <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 24px; color: #4b5f5a; text-align: center;">
-                  Use the verification code below to verify your email address and continue setting up your pharmacy account.
+                <p style="margin: 0 0 28px 0; font-size: 15px; line-height: 24px; color: #4b5f5a; text-align: center;">
+                  Tap the button below to confirm your email address and continue setting up your pharmacy account.
                 </p>
-                <!-- OTP -->
+                <!-- CTA -->
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td align="center" style="padding: 8px 0 20px 0;">
-                      <span style="display: inline-block; background-color: #f0faf5; border: 1px solid #bfe3cf; border-radius: 10px; padding: 14px 28px; font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: 10px; color: #14532d; font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;">
-                        {{ .Token }}
-                      </span>
+                    <td align="center" style="padding: 8px 0 24px 0;">
+                      <a
+                        href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;email={{ .Email }}"
+                        target="_blank"
+                        style="display: inline-block; background-color: #0a9a69; border-radius: 10px; padding: 14px 36px; font-size: 16px; line-height: 22px; font-weight: 700; color: #ffffff; text-decoration: none;"
+                      >
+                        Confirm email
+                      </a>
                     </td>
                   </tr>
                 </table>
                 <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 22px; color: #4b5f5a; text-align: center;">
-                  This code expires in <strong style="color: #10201d;">10 minutes</strong>.
+                  If the button does not work, copy and paste this link into your browser:
                 </p>
-                <p style="margin: 0 0 28px 0; font-size: 14px; line-height: 22px; color: #4b5f5a; text-align: center;">
-                  For your security, never share this code with anyone.
+                <p style="margin: 0 0 24px 0; font-size: 13px; line-height: 20px; color: #4b5f5a; text-align: center; word-break: break-all;">
+                  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;email={{ .Email }}" target="_blank" style="color: #0a9a69; text-decoration: underline;">
+                    {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;email={{ .Email }}
+                  </a>
+                </p>
+                <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 22px; color: #4b5f5a; text-align: center;">
+                  This link can only be used once.
                 </p>
                 <!-- Divider -->
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td style="border-top: 1px solid #e5eae8; padding-top: 24px;">
                       <p style="margin: 0 0 8px 0; font-size: 13px; line-height: 20px; color: #6b7f79; text-align: center;">
-                        If you did not request this verification, you can safely ignore this email.
+                        If you did not create a PharmaGuard account, you can safely ignore this email.
                       </p>
                       <p style="margin: 0; font-size: 13px; line-height: 20px; color: #6b7f79; text-align: center;">
                         Need help? Reply to this email or contact your pharmacy administrator.
