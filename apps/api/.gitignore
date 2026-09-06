@@ -1,0 +1,7 @@
+.vercel
+.env*
+# Generated Vercel serverless build output (scripts/build-vercel.mjs):
+# dist-vercel holds the bundled Express app re-exported by api/index.js;
+# public is the empty static output required by vercel.json outputDirectory.
+dist-vercel/
+public/

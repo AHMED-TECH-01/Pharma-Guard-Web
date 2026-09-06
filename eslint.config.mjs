@@ -13,6 +13,10 @@ export default defineConfig(
       '**/coverage/**',
       '**/next-env.d.ts',
       '**/*.config.js',
+      // Generated Vercel artifacts (serverless bundle, CLI links/outputs)
+      '**/dist-vercel/**',
+      '**/.vercel/**',
+      '**/public/api/**',
     ],
   },
   eslint.configs.recommended,
