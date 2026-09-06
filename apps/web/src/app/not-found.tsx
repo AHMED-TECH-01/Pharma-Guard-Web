@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ShieldPlus } from 'lucide-react';
+import { BrandMark } from '@/components/brand-mark';
 import { BackButton } from '@/components/back-button';
 
 /**
@@ -12,7 +12,7 @@ export default function NotFoundPage() {
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex h-16 max-w-6xl items-center px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <ShieldPlus className="size-8 text-primary-800" aria-hidden />
+            <BrandMark variant="outline" className="size-8 text-primary-800" />
             <span className="text-lg font-semibold tracking-tight">PharmaGuard</span>
           </Link>
         </div>

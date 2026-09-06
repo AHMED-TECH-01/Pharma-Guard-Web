@@ -136,10 +136,12 @@ export async function sendPasswordResetEmail(email: string): Promise<{ sent: tru
 }
 
 /**
- * Sends/resends the signup email-verification OTP through Supabase Auth.
+ * Sends/resends the signup verification email through Supabase Auth.
  * GoTrue generates, hashes, stores, expires (10 min), and rate-limits the
- * code - this service never sees the OTP value. Failures are logged but not
- * surfaced so the response cannot enumerate accounts.
+ * 6-digit code - this service never sees it. The template displays the
+ * code, which the user enters on the frontend /verify-email page (or, if
+ * the dashboard template is switched to links, /auth/confirm). Failures
+ * are logged but not surfaced so the response cannot enumerate accounts.
  */
 export async function sendVerificationEmail(email: string): Promise<void> {
   const { error } = await getSupabaseAuth().auth.resend({
@@ -158,8 +160,8 @@ export interface ExchangeSessionResult {
 }
 
 /**
- * Completes a browser-side Supabase public auth operation (OAuth PKCE
- * callback or signup OTP verification): the browser hands over the session
+ * Completes a browser-side Supabase public auth operation (signup OTP
+ * verification or password-recovery PKCE): the browser hands over the session
  * it received from Supabase Auth, the access token is re-validated
  * server-side, and the user context is loaded before any application
  * session cookies are issued.

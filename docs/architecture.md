@@ -219,15 +219,14 @@ The backend owns:
 
 Supabase PostgreSQL is the primary persistent database.
 
-Supabase Auth can be used for:
+Supabase Auth is used for:
 
 -   Sign up.
 -   Sign in.
 -   Session management.
 -   Password reset.
--   Email verification.
--   OAuth (Google, Microsoft/Azure) via provider configuration in the
-    Supabase dashboard.
+-   Signup email verification (6-digit OTP code entry; no OAuth
+    providers).
 
 ### Approved browser (public/auth) Supabase operations
 
@@ -235,22 +234,27 @@ The browser Supabase client (publishable key, `persistSession: false`) is
 approved for these public auth operations only:
 
 -   Password-recovery PKCE exchange (reset password completion).
--   OAuth `signInWithOAuth` redirect + PKCE `exchangeCodeForSession`
-    (callback page `/auth/callback`).
--   Signup email-OTP `verifyOtp` (page `/verify-email`).
+-   Signup OTP verification via `verifyOtp({ type: 'signup', email, token })`
+    (page `/verify-email`).
+-   Signup confirmation token-hash exchange via
+    `verifyOtp({ type: 'signup', tokenHash })` (page `/auth/confirm`),
+    kept as the link-template fallback.
 
 In every case the resulting session is handed to the backend endpoint
 `POST /api/v1/auth/session`, which re-validates the access token with
 `auth.getUser()` server-side before issuing the HttpOnly application
 cookies. The browser never persists a Supabase session.
 
-### Email OTP ownership
+### Signup verification-code ownership
 
-Verification codes are generated, hashed, stored, expired, and
-attempt-limited by GoTrue (Supabase Auth). The application stores no OTP
-data and requires no OTP table; branded delivery uses the Supabase Auth
-email template (see docs/auth-setup.md and
-docs/email-templates/confirm-signup.html).
+The signup verification code is generated, hashed, stored, expired
+(10 minutes), and attempt-limited by GoTrue (Supabase Auth); the browser
+submits only the email address and the 6-digit code to `verifyOtp`. The
+application stores no code data and requires no code table; branded
+delivery uses the Supabase Auth email template with Gmail SMTP (see
+docs/auth-setup.md and docs/email-templates/confirm-signup.html). If the
+dashboard template is switched to the link pattern, `/auth/confirm`
+performs the equivalent token-hash exchange instead.
 
 Every pharmacy-owned table must support tenant isolation.
 

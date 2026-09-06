@@ -18,6 +18,7 @@ Reuse registered components before creating new ones.
   MobileNav       Mobile navigation drawer
   Topbar          Header/search/profile
   Breadcrumbs     Page context
+  BrandMark       Shield logo mark (solid/outline)
   PageHeader      Page title/actions
   Card            Shared surface
   KPI Card        Dashboard metric
@@ -93,9 +94,8 @@ LoginForm
 SignupForm
 PasswordField
 PasswordStrength
-OAuthButtons        Google/Microsoft via Supabase Auth (signInWithOAuth -> /auth/callback)
 AuthError
-OTPInput            6-digit verification code boxes (keyboard/paste/one-time-code)
+OTPInput
 ```
 
 ------------------------------------------------------------------------
@@ -172,8 +172,8 @@ Destructive actions must use confirmation.
  /pricing
  /login
  /signup
- /verify-email      6-digit email-OTP verification (signup completion)
- /auth/callback     OAuth PKCE callback (provider return -> session exchange)
+ /verify-email      Signup OTP verification (6-digit code -> session exchange)
+ /auth/confirm      Confirmation-link fallback landing (token_hash verifyOtp -> session exchange)
  /forgot-password
  /reset-password
 

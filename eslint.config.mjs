@@ -13,9 +13,11 @@ export default defineConfig(
       '**/coverage/**',
       '**/next-env.d.ts',
       '**/*.config.js',
-      // Generated Vercel artifacts (serverless bundle, CLI links/outputs)
+      // Generated Vercel artifacts (serverless bundle, CLI links/outputs,
+      // throwaway CLI/probe scripts)
       '**/dist-vercel/**',
       '**/.vercel/**',
+      '**/.vercel-tmp/**',
       '**/public/api/**',
     ],
   },

@@ -2,12 +2,11 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { MailCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { signupFormSchema, issuesToFieldErrors } from '@/lib/auth-forms';
 import { ApiClientError, api } from '@/lib/api';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { AuthError } from '@/components/auth/auth-error';
-import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { PasswordField } from '@/components/auth/password-field';
 import { PasswordStrength } from '@/components/auth/password-strength';
 
@@ -15,8 +14,11 @@ import { PasswordStrength } from '@/components/auth/password-strength';
  * Sign Up (PRD §10.3, ui-rules §15, reference SIGN UP PAGE composition).
  * Cross-field rules (confirm password, terms) are validated client-side;
  * the wire payload is the shared signupSchema enforced again by the API.
+ * After creation the user verifies their email with the 6-digit code
+ * emailed by Supabase Auth (Gmail SMTP), entering it on /verify-email.
  */
 export default function SignupPage() {
+  const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -26,7 +28,6 @@ export default function SignupPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [created, setCreated] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,7 +55,9 @@ export default function SignupPage() {
         password: parsed.data.password,
         phone: parsed.data.phone,
       });
-      setCreated(true);
+      // The 6-digit code is on its way; the OTP page owns verification,
+      // resend, and the change-email path from here on.
+      router.push(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`);
     } catch (cause) {
       setFormError(
         cause instanceof ApiClientError
@@ -65,37 +68,10 @@ export default function SignupPage() {
     }
   }
 
-  if (created) {
-    return (
-      <AuthLayout>
-        <div className="text-center">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary-50">
-            <MailCheck className="size-6 text-primary-700" aria-hidden />
-          </span>
-          <h1 className="mt-4 text-xl font-semibold tracking-tight">Verify your email</h1>
-          <p className="mt-2 text-sm leading-relaxed text-text-muted">
-            We sent a 6-digit verification code to{' '}
-            <span className="font-medium text-text">{email}</span>. Enter it to finish setting up
-            your pharmacy account.
-          </p>
-          <Link
-            href={`/verify-email?email=${encodeURIComponent(email)}`}
-            className="mt-6 flex h-10 items-center justify-center rounded-md bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800"
-          >
-            Enter verification code
-          </Link>
-          <p className="mt-4 text-xs text-text-muted">
-            Wrong address? Create the account again with a different email.
-          </p>
-        </div>
-      </AuthLayout>
-    );
-  }
-
   return (
     <AuthLayout>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Create Your Account 🚀</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Create Your Account 🚀</h1>
         <p className="mt-1 text-sm text-text-muted">
           Join thousands of pharmacies using PharmaGuard
         </p>
@@ -114,7 +90,7 @@ export default function SignupPage() {
               onChange={(event) => setFullName(event.target.value)}
               placeholder="Enter your full name"
               aria-invalid={fieldErrors.fullName ? true : undefined}
-              className={`h-10 w-full rounded-md border bg-surface px-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
+              className={`h-12 w-full rounded-lg border bg-surface px-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
                 fieldErrors.fullName ? 'border-status-critical-border' : 'border-border'
               }`}
             />
@@ -138,7 +114,7 @@ export default function SignupPage() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Enter your email"
               aria-invalid={fieldErrors.email ? true : undefined}
-              className={`h-10 w-full rounded-md border bg-surface px-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
+              className={`h-12 w-full rounded-lg border bg-surface px-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
                 fieldErrors.email ? 'border-status-critical-border' : 'border-border'
               }`}
             />
@@ -161,7 +137,7 @@ export default function SignupPage() {
               onChange={(event) => setPhone(event.target.value)}
               placeholder="Enter your phone number"
               aria-invalid={fieldErrors.phone ? true : undefined}
-              className={`h-10 w-full rounded-md border bg-surface px-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
+              className={`h-12 w-full rounded-lg border bg-surface px-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
                 fieldErrors.phone ? 'border-status-critical-border' : 'border-border'
               }`}
             />
@@ -227,15 +203,11 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="h-10 w-full rounded-md bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:opacity-60"
+            className="h-12 w-full rounded-lg bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:opacity-60"
           >
             {submitting ? 'Creating account…' : 'Create Account'}
           </button>
         </form>
-
-        <div className="mt-6">
-          <OAuthButtons action="Sign up" layout="row" />
-        </div>
 
         <p className="mt-6 text-center text-sm text-text-muted">
           Already have an account?{' '}

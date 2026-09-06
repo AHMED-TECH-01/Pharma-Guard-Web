@@ -3,11 +3,11 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Lock, Mail } from 'lucide-react';
 import { loginFormSchema, issuesToFieldErrors } from '@/lib/auth-forms';
 import { ApiClientError, api } from '@/lib/api';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { AuthError } from '@/components/auth/auth-error';
-import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { PasswordField } from '@/components/auth/password-field';
 
 /**
@@ -63,7 +63,7 @@ export default function LoginPage() {
   return (
     <AuthLayout>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome Back! 👋</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Welcome Back! 👋</h1>
         <p className="mt-1 text-sm text-text-muted">Sign in to continue to your account</p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4" noValidate>
@@ -71,19 +71,25 @@ export default function LoginPage() {
             <label htmlFor="email" className="block text-sm font-medium">
               Email Address
             </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="Enter your email"
-              aria-invalid={fieldErrors.email ? true : undefined}
-              className={`h-10 w-full rounded-md border bg-surface px-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
-                fieldErrors.email ? 'border-status-critical-border' : 'border-border'
-              }`}
-            />
+            <div className="relative">
+              <Mail
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+                aria-hidden
+              />
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Enter your email"
+                aria-invalid={fieldErrors.email ? true : undefined}
+                className={`h-12 w-full rounded-lg border bg-surface pl-10 pr-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
+                  fieldErrors.email ? 'border-status-critical-border' : 'border-border'
+                }`}
+              />
+            </div>
             {fieldErrors.email ? (
               <p className="text-xs text-status-critical-fg" role="alert">
                 {fieldErrors.email}
@@ -99,6 +105,7 @@ export default function LoginPage() {
               placeholder="Enter your password"
               error={fieldErrors.password ?? null}
               disabled={submitting}
+              leadingIcon={Lock}
             />
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm text-text-muted">
@@ -123,29 +130,28 @@ export default function LoginPage() {
           {formError ? <AuthError message={formError} /> : null}
 
           {needsVerification ? (
-            <p className="text-center text-sm text-text-muted">
-              Didn&apos;t get the code?{' '}
-              <Link
-                href={`/verify-email?email=${encodeURIComponent(email)}`}
-                className="font-medium text-primary-700 transition-colors duration-150 hover:text-primary-800"
-              >
-                Verify your email
-              </Link>
-            </p>
+            <div className="text-center text-sm text-text-muted">
+              <p>
+                Didn&apos;t get the code? Enter it on the{' '}
+                <Link
+                  href={`/verify-email?email=${encodeURIComponent(email)}`}
+                  className="font-medium text-primary-700 transition-colors duration-150 hover:text-primary-800"
+                >
+                  verification page
+                </Link>
+                .
+              </p>
+            </div>
           ) : null}
 
           <button
             type="submit"
             disabled={submitting}
-            className="h-10 w-full rounded-md bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:opacity-60"
+            className="h-12 w-full rounded-lg bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:opacity-60"
           >
             {submitting ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
-
-        <div className="mt-6">
-          <OAuthButtons action="Sign in" />
-        </div>
 
         <p className="mt-6 text-center text-sm text-text-muted">
           Don&apos;t have an account?{' '}

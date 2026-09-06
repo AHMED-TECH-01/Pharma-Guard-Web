@@ -52,9 +52,10 @@ authRouter.post(
     try {
       const input = getValidatedBody(req, signupSchema);
       const result = await signup(input);
-      // admin.createUser does not email; deliver the branded signup OTP now
-      // (GoTrue handles generation/hashing/expiry/rate limits). Failures are
-      // logged only - the response stays identical either way.
+      // admin.createUser does not email; deliver the signup verification
+      // email now (GoTrue handles generation/hashing/expiry/rate limits; the
+      // template shows the 6-digit code entered on /verify-email). Failures
+      // are logged only - the response stays identical either way.
       await sendVerificationEmail(input.email);
       ok(res, result, 201);
     } catch (error) {
@@ -101,7 +102,8 @@ authRouter.post(
   validateBody(sessionExchangeSchema),
   async (req, res, next) => {
     try {
-      // Completes OAuth PKCE callbacks and signup OTP verification: the
+      // Completes the signup verification (OTP code or confirmation-link
+      // fallback) and password-recovery exchanges: the
       // browser finished a Supabase public auth operation and hands over the
       // resulting session; exchangeSession re-validates the access token
       // server-side before the application cookies are issued.

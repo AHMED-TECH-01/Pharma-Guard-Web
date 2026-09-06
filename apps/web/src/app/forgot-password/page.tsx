@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <AuthLayout>
-        <div className="rounded-lg border border-border bg-surface p-8 text-center shadow-sm">
+        <div className="text-center">
           <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-status-info-bg">
             <MailCheck className="size-6 text-status-info-fg" aria-hidden />
           </span>
@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
           </p>
           <Link
             href="/login"
-            className="mt-6 flex h-10 items-center justify-center rounded-md border border-border bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"
+            className="mt-6 flex h-10 items-center justify-center rounded-lg border border-border bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"
           >
             Back to sign in
           </Link>
@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthLayout>
-      <div className="rounded-lg border border-border bg-surface p-8 shadow-sm">
+      <div>
         <h1 className="text-2xl font-semibold tracking-tight">Forgot your password?</h1>
         <p className="mt-1 text-sm text-text-muted">
           Enter your account email and we&apos;ll send you a reset link.
@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Enter your email"
               aria-invalid={fieldError ? true : undefined}
-              className={`h-10 w-full rounded-md border bg-surface px-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
+              className={`h-12 w-full rounded-lg border bg-surface px-3 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 ${
                 fieldError ? 'border-status-critical-border' : 'border-border'
               }`}
             />
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="h-10 w-full rounded-md bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:opacity-60"
+            className="h-12 w-full rounded-lg bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:opacity-60"
           >
             {submitting ? 'Sending…' : 'Send reset link'}
           </button>

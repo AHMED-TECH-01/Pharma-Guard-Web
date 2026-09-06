@@ -3,9 +3,9 @@ import { resendVerificationSchema, sessionExchangeSchema } from '@pharmaguard/va
 
 /**
  * Auth-upgrade contract tests: the resend-verification payload and the
- * session-exchange payload (OAuth PKCE callback / signup OTP verification).
- * These pin the server-side rules the verify-email and auth-callback pages
- * mirror.
+ * session-exchange payload (signup verification / password recovery).
+ * These pin the server-side rules the auth/verify-email, auth/confirm and
+ * reset-password pages mirror.
  */
 
 describe('resendVerificationSchema', () => {

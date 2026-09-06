@@ -94,10 +94,11 @@ export function PurchasesPage() {
   function renderContent() {
     if (!checked || !session) {
       return (
-        <div className="flex min-h-dvh" aria-busy="true" aria-label="Loading session">
-          <div className="hidden w-[230px] shrink-0 bg-primary-950 lg:block" />
-          <div className="flex-1" />
-        </div>
+        <div
+          aria-busy="true"
+          aria-label="Loading session"
+          className="h-64 animate-pulse rounded-lg bg-border-subtle"
+        />
       );
     }
     if (!activePharmacy) {

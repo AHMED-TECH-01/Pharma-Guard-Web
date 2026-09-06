@@ -22,13 +22,13 @@ import {
   Search,
   Settings,
   ShieldAlert,
-  ShieldPlus,
   ShoppingCart,
   Truck,
   Users,
   X,
   type LucideIcon,
 } from 'lucide-react';
+import { BrandMark } from '@/components/brand-mark';
 
 /**
  * Application shell (build-plan Phase 1 + Phase 3, ui-rules §2/§3, ui-tokens §9,
@@ -187,6 +187,11 @@ export function AppShell({
             >
               <Icon className="size-4" aria-hidden />
               {item.label}
+              {item.href === '/alerts' && unreadAlertsCount > 0 ? (
+                <span className="ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-status-critical-fg px-1 text-[10px] font-semibold text-white">
+                  {unreadAlertsCount > 9 ? '9+' : unreadAlertsCount}
+                </span>
+              ) : null}
             </Link>
           </li>
         );
@@ -211,7 +216,7 @@ export function AppShell({
 
   const brand = (
     <div className="flex items-center gap-2.5 px-5 py-5">
-      <ShieldPlus className="size-7" aria-hidden />
+      <BrandMark variant="solid" className="size-7" />
       <span className="text-lg font-semibold tracking-tight">PharmaGuard</span>
     </div>
   );
@@ -271,7 +276,7 @@ export function AppShell({
             type="button"
             aria-label="Open navigation"
             onClick={() => setMobileNavOpen(true)}
-            className="rounded-md border border-border p-2 transition hover:bg-surface-muted"
+            className="rounded-md p-2 transition hover:bg-surface-muted"
           >
             <Menu className="size-5" aria-hidden />
           </button>

@@ -1,6 +1,6 @@
 # remember.md — PharmaGuard project memory
 
-Last updated: 06 Sep 2026 — Web deployed to Vercel production (project pharma-guard-web, https://pharma-guard-web.vercel.app) and visually verified; the API is deployed too (https://pharma-guard-api.vercel.app) with the Web→API same-site proxy verified live. See the Vercel deployment sections below.
+Last updated: 06 Sep 2026 (evening) — OTP flow RESTORED per user decision (Gmail SMTP delivery confirmed working by the user; the live dashboard still sends the 6-digit {{ .Token }} code, so /verify-email was reinstated with the 6-box OTP input; /auth/confirm remains as a link-template fallback; Google/Microsoft OAuth stays removed). Gmail SMTP replaced Resend in the dashboard earlier the same day. Code changes are local-only pending user commit/push; web + API remain deployed to Vercel production (https://pharma-guard-web.vercel.app, https://pharma-guard-api.vercel.app). See the auth and deployment sections below.
 This file is a working memory of the auth implementation: architecture, parameters, routes, env NAMES only.
 No secrets, keys, or credentials are ever stored here.
 
@@ -28,24 +28,34 @@ No secrets, keys, or credentials are ever stored here.
 
 - Backend-authoritative cookie sessions: Express sets HttpOnly `pg_access` (1h) / `pg_refresh` (7d) cookies; the browser never persists Supabase sessions.
 - Existing password flows (signup, login, logout, password reset/recovery) are unchanged and remain the default paths.
-- Email OTP verification is owned by Supabase Auth (GoTrue): 6-digit code, hashed at rest, single-use, 10-minute expiry (dashboard OTP expiry 600s), attempt-limited, resend rate-limited. No custom OTP table, no application-side email provider (same precedent as users-module invites). The app never stores, logs, or displays OTP values.
-- Signup sequence: `admin.createUser` (email_confirm:false, does NOT email) then `auth.resend({ type: 'signup', email })` delivers the branded OTP email. Resend failures are warn-logged only — anti-enumeration.
-- Session exchange gate: `POST /api/v1/auth/session` accepts `{accessToken, refreshToken}` from the browser after OAuth PKCE or `verifyOtp`, re-validates the access token server-side via `supabase.auth.getUser()`, loads user context, then issues the existing HttpOnly cookies. The server never trusts client claims. OAuth and OTP funnel through this one gate.
-- Approved browser Supabase operations (persistSession:false client only): recovery PKCE (pre-existing), OAuth `signInWithOAuth`, PKCE `exchangeCodeForSession`, signup `verifyOtp`. Everything else stays server-side.
-- Login gating: with "Confirm email" enabled, GoTrue blocks unconfirmed logins (`email_not_confirmed` → existing friendly message); the login page shows a "Verify your email" link to `/verify-email?email=…`.
+- Signup email verification is owned by Supabase Auth (GoTrue) as a 6-digit OTP code (restored 06 Sep): the code is stored hashed, single-use, 10-minute expiry ("OTP expiry" 600s), entry attempt-limited, resend rate-limited. OTP length 6 + expiry 600s were verified live via the Management API on 04 Sep and match the live branded template. The app never stores, logs, or displays code values.
+- Signup sequence (shape unchanged): `admin.createUser` (email_confirm:false, does NOT email) then `auth.resend({ type: 'signup', email })` delivers the branded confirmation email. Send failures are warn-logged only — anti-enumeration.
+- OTP template (docs/email-templates/confirm-signup.html, restored 06 Sep to the LIVE `{{ .Token }}` version): branded code box, subject "Verify your email - PharmaGuard" — matches what the dashboard actually sends now that Gmail SMTP delivers to any recipient. The link-template variant from the earlier 06 Sep pass was replaced by this restore (never committed).
+- Web pages: `/verify-email` RESTORED from git HEAD (spec-exact copy after user-requested edits: "Check your email" heading, full email display, 6-box OTPInput, Verify button disabled while submitting/when incomplete, invalid/expired/too-many/network states, resend via POST /auth/resend-verification with 60s UI cooldown, Change email → /signup; success → session exchange → /onboarding or /dashboard). `/auth/confirm` KEPT as the link-template fallback (auto token-hash exchange). Signup routes to /verify-email?email=... on success; login links there when GoTrue blocks an unconfirmed login.
+- Session exchange gate: `POST /api/v1/auth/session` accepts `{accessToken, refreshToken}` from the browser after the confirmation-link or password-recovery exchange, re-validates the access token server-side via `supabase.auth.getUser()`, loads user context, then issues the existing HttpOnly cookies. The server never trusts client claims.
+- Approved browser Supabase operations (persistSession:false client only): recovery PKCE (pre-existing), the signup OTP verification (`verifyOtp` with email + 6-digit token) and the signup confirmation token-hash exchange fallback (`verifyOtp` with token_hash). Everything else stays server-side; OAuth operations removed.
+- Login gating: with "Confirm email" enabled, GoTrue blocks unconfirmed logins (`email_not_confirmed` → existing friendly message); the login page links to `/verify-email?email=...`, which owns code entry and resend.
 
-## Providers
+## OAuth (removed 06 Sep 2026)
 
-- Google + Microsoft (Azure) OAuth via `signInWithOAuth({ provider: 'google' | 'azure', options: { redirectTo: origin + '/auth/callback' } })` in `apps/web/src/components/auth/oauth-buttons.tsx`.
-- Provider client IDs/secrets live ONLY in the Supabase dashboard — never in the repo or env files. No new env vars were added by this upgrade.
-- OAuth users arrive provider-verified (no OTP step for them).
+- Google + Microsoft (Azure) social sign-in REMOVED: `apps/web/src/components/auth/oauth-buttons.tsx` and `/auth/callback` deleted; signup/login offer email + password only. If the providers were enabled in the Supabase dashboard, disable them (Authentication → Sign In / Providers).
+- Accounts previously created via a social provider can still sign in with email + password after setting a password through the forgot-password flow.
+- Gemini/OCR (`GEMINI_API_KEY`) is unrelated to auth and unaffected.
 
 ## Routes
 
-- API: `POST /api/v1/auth/resend-verification` (verificationLimiter: 5/hour per IP+email, anti-enumeration `{sent:true}` response) and `POST /api/v1/auth/session` (sessionExchangeLimiter: 10/15min per IP; sets cookies; returns the same shape as `/auth/me`).
-- Web: `/verify-email` (masked email heading, 6-box OTPInput, verifying/invalid/expired/too-many-attempts/resend cooldown/network states, 60s resend cooldown, "Change Email" → `/signup` as a fresh signup — no silent identity mutation) and `/auth/callback` (PKCE code exchange, provider `error`/`access_denied`/missing-param friendly states, then session exchange).
+- API: `POST /api/v1/auth/resend-verification` (re-sends the signup OTP email; verificationLimiter: 5/hour per IP+email, anti-enumeration `{sent:true}` response) and `POST /api/v1/auth/session` (sessionExchangeLimiter: 10/15min per IP; sets cookies; returns the same shape as `/auth/me`).
+- Web: `/verify-email` (OTP page: 6-box input, verify/resend-60s-cooldown/change-email, invalid/expired/too-many/network states) and `/auth/confirm` (confirmation-link fallback: auto token-hash exchange, verifying/invalid/too-many states, resend with email param, "Create an account" fallback). `/auth/callback` remains deleted.
 - Post-session routing: `/onboarding` if the user has no pharmacy yet, else `/dashboard`.
 - Rate limiters follow the existing `makeLimiter` pattern in `apps/api/src/middleware/rate-limit.ts`.
+
+## Profile, membership, RLS, protected routes (unchanged by the 06 Sep overhaul)
+
+- Profiles: created by the `on_auth_user_created` trigger from auth.users signup metadata; read via the API's service key in `loadUserContext` (auth.service.ts); PGRST116 → honest 401 "Account profile not found", any other fault → 502 "Profile service is unavailable" + `profile_lookup_failed` log.
+- Membership: `pharmacy_memberships` → `pharmacies`; `resolvePharmacyContext` 403 "No active pharmacy membership" is the normal pre-onboarding state; /onboarding is its own authenticated area.
+- RLS: enabled on all 17 tables; anon/authenticated hold NO table grants (all data flows through the API); migration 0008 grants service_role DML and locks `create_pharmacy_with_membership` to service_role.
+- Protected routes: web pages boot via cookie `fetchSession`; API requireAuth guards every area before the 404 handler (pinned by app.test.ts).
+- Next recommended step: user runs the OTP test matrix on localhost (signup → receive code → /verify-email → verify → onboarding/dashboard, plus wrong-code, expired-code, resend-cooldown, change-email, logout and unauthenticated-dashboard checks), then production Site URL + allow-list before any push; commit/push remains the user's explicit decision.
 
 ## Validation schemas
 
@@ -54,7 +64,7 @@ No secrets, keys, or credentials are ever stored here.
 
 ## Email template + brand
 
-- Template: `docs/email-templates/confirm-signup.html` — the source of the branded Confirm-signup email. Uses GoTrue variables `{{ .Token }}` (6-digit OTP) and `{{ .SiteURL }}`. Status: applied live to the project on 04 Sep 2026 (subject "Verify your email - PharmaGuard") once custom SMTP unlocked customization; edits go via the Supabase dashboard or PATCH of `mailer_templates_confirmation_content`.
+- Template: `docs/email-templates/confirm-signup.html` — the source of the branded Confirm-signup email, restored 06 Sep 2026 to the LIVE `{{ .Token }}` 6-digit version (GoTrue variables `{{ .Token }}` + `{{ .SiteURL }}` for the logo; subject "Verify your email - PharmaGuard"). This matches the template already applied live (04 Sep); with Gmail SMTP it now delivers to any recipient — no dashboard paste needed. The 06 Sep LINK variant was discarded in favor of the restored OTP flow.
 - Logo: `apps/web/public/brand/pharmaguard-logo.png`, referenced by the template as `{{ .SiteURL }}/brand/pharmaguard-logo.png`. Production-safe (HTTPS origin); with a localhost Site URL the logo will not render in real inbox clients — expected in development.
 
 ## Environment variables (NAMES only — never values)
@@ -68,20 +78,20 @@ No secrets, keys, or credentials are ever stored here.
 - 60/60 tests pass (56 prior + 4 new contract tests in `apps/api/tests/auth-verification.test.ts` for the two schemas and error mapping).
 - Gates: `npm run lint` EXIT 0, `npm run build` EXIT 0, API typecheck EXIT 0.
 - Final re-validation (05 Sep 2026, unchanged tree): lint EXIT 0, typecheck EXIT 0 (4 workspaces), npm test 60/60, build EXIT 0 (37 routes); secret-pattern scan of the 18-file auth changeset clean (no Resend/SMTP/password literals in tracked or untracked files); nothing staged; web dev server restarted after the root build per the ops note. Resend-as-SMTP delivery task concluded with zero code changes required — SMTP credentials live only in the Supabase dashboard.
+- Auth delivery overhaul re-validation (06 Sep 2026): typecheck EXIT 0 (4 workspaces), lint EXIT 0 (after eslint ignores += .vercel-tmp), npm test 60/60 EXIT 0, build EXIT 0 — 36 routes (/auth/confirm present; /verify-email + /auth/callback gone). verifyOtp token-hash exchange required GoTrue's snake_case `token_hash` field (VerifyTokenHashParams in @supabase/auth-js 2.115) — camelCase tokenHash fails TS2353. apps/web/.next deleted to clear phantom .next/types entries for the two deleted pages (TS config includes .next/types → phantom TS2307); restart the dev server after a root build if one was running.
 - Vercel-build task (05 Sep 2026): the reported apps/api build failure (TS2307 for both @pharmaguard packages + missing vitest + cascades) was root-caused to the gitignored dist/ of the shared packages on a fresh checkout (no build ordering for per-workspace builds) plus vitest/@types/node missing from apps/api's own devDependencies. Fixed with workspace `prepare` scripts + apps' `prebuild` wrappers + devDeps (zero source changes). Re-verified from a simulated fresh checkout: npm ci EXIT 0 with both dists auto-built, npm run build -w apps/api EXIT 0, root build/typecheck/lint/test green, dev servers healthy.
 - Live probes: `/`, `/login`, `/signup`, `/verify-email`, `/auth/callback` → 200; API health → 200; `POST /auth/resend-verification` invalid body → 422; `POST /auth/session` invalid body → 422 and garbage tokens → 401 (server-side token validation proven live).
 - Regression: existing login/signup/logout/reset flows re-verified via tests; all guarded pages still boot via cookie `fetchSession`.
 
 ## Remaining user actions (Supabase dashboard — code is configuration-tolerant)
 
-Status 04 Sep 2026 (scalar config applied programmatically via the Supabase Management API with a user-provided access token — token never stored in files):
-- DONE + verified via live GET: Confirm email enabled (`mailer_autoconfirm=false`), OTP expiry 600s, OTP length 6, Site URL `http://localhost:3000`, redirect allow-list `http://localhost:3000/**`.
-- RESOLVED (04 Sep 2026): custom SMTP configured via Supabase dashboard (Resend: smtp.resend.com:587, sender onboarding@resend.dev, name Pharma-Guard, rate_limit_email_sent 30/h) → template customization unlocked; branded Confirm-signup template (4,912 chars, `{{ .Token }}`, PharmaGuard logo) + subject "Verify your email - PharmaGuard" applied via Management API (`mailer_templates_confirmation_content`) and echo-verified.
-- DONE (user, dashboard): Azure OAuth provider enabled with client ID + secret.
-- DONE (04 Sep 2026): Google OAuth provider enabled via Management API (user's Google Cloud Console client; PATCH external_google_enabled/client_id/secret, echo-verified). Auth configuration is now COMPLETE: Google + Azure providers, Resend SMTP + branded template, Confirm email + OTP 600s/6-digit, Site URL + allow-list.
-- RESOLVED (05 Sep 2026): OTP email delivery — root cause was NOT app code or Supabase config. Verified by a raw SMTP session against smtp.resend.com:587 (AUTH 235, MAIL FROM 250, RCPT TO 250) then a DATA-stage send: Resend answered `550 You can only send testing emails to your own email address (…)`. The shared testing sender `onboarding@resend.dev` delivers ONLY to the Resend account owner's address; every other recipient is rejected at DATA, which GoTrue surfaces as the generic warn `verification_email_send_failed` / "Error sending confirmation email". The registered app account IS the owner address, and a real `POST /auth/resend-verification` to it logged NO warn (200 only) — delivery confirmed working.
-- PENDING (user): live tests — Google/Azure buttons → /auth/callback → dashboard; enter the received OTP at /verify-email. Production / other recipients: verify a sending domain at resend.com/domains and change `smtp_admin_email` + sender to that domain — until then only the owner address can receive mail (dev-only limitation, not a bug). Also: prod Site URL/redirects, HTTPS cookies. Rotate the sbp_ access token, Resend API key, and Google client secret after testing (all chat-exposed).
-Exact guide: `docs/auth-setup.md` (incl. the free-tier template restriction note — custom SMTP is the unlock).
+Status 06 Sep 2026 after the Resend → Gmail SMTP switch + OTP-page restoration (exact steps in docs/auth-setup.md section 2):
+- DONE (user): Gmail SMTP is live in the dashboard (smtp.gmail.com:587, dedicated address + App Password) — OTP emails confirmed arriving in the inbox.
+- DONE (live): branded `{{ .Token }}` 6-digit Confirm-signup template applied (04 Sep) — matches the restored docs/email-templates/confirm-signup.html; no template action needed.
+- PENDING (user): disable Google + Azure providers (Authentication → Sign In / Providers) — the UI no longer offers them.
+- KEEP: Confirm email enabled; "OTP expiry" 600s; OTP length 6; dev Site URL `http://localhost:3000` + allow-list `http://localhost:3000/**`. For production: Site URL `https://pharma-guard-web.vercel.app` + matching allow-list.
+- Accepted trade-off (documented in docs/auth-setup.md): consumer Gmail ≈ 500 recipients/day and higher spam-folder risk; Supabase recommends dedicated transactional providers for production scale.
+- Standing: rotate chat-exposed credentials (sbp_ access token, Resend API key, Google client secret). Git note: origin/main was back in sync with local main (0d3b41c) as of 06 Sep; any push must await the user's explicit word.
 
 ## Operational notes (standing)
 

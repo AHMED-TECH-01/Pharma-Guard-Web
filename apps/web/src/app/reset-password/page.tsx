@@ -67,7 +67,7 @@ async function resolveRecoveryCredentials(): Promise<{ ok: true } | { ok: false 
 
 function FormSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-surface p-8 shadow-sm" aria-busy="true">
+    <div aria-busy="true">
       <div className="h-6 w-48 animate-pulse rounded-md bg-surface-muted" />
       <div className="mt-8 space-y-4">
         <div className="h-10 w-full animate-pulse rounded-md bg-surface-muted" />
@@ -138,7 +138,7 @@ function ResetPasswordForm() {
 
   if (phase === 'invalid') {
     return (
-      <div className="rounded-lg border border-border bg-surface p-8 text-center shadow-sm">
+      <div className="text-center">
         <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-status-warning-bg">
           <KeyRound className="size-6 text-status-warning-fg" aria-hidden />
         </span>
@@ -149,7 +149,7 @@ function ResetPasswordForm() {
         </p>
         <Link
           href="/forgot-password"
-          className="mt-6 flex h-10 items-center justify-center rounded-md bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800"
+          className="mt-6 flex h-12 items-center justify-center rounded-lg bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800"
         >
           Request a new link
         </Link>
@@ -159,7 +159,7 @@ function ResetPasswordForm() {
 
   if (phase === 'done') {
     return (
-      <div className="rounded-lg border border-border bg-surface p-8 text-center shadow-sm">
+      <div className="text-center">
         <h1 className="text-xl font-semibold tracking-tight">Password updated</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-muted">
           Your password has been changed. Use it to sign in - any other sessions stay
@@ -167,7 +167,7 @@ function ResetPasswordForm() {
         </p>
         <Link
           href="/login"
-          className="mt-6 flex h-10 items-center justify-center rounded-md bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800"
+          className="mt-6 flex h-12 items-center justify-center rounded-lg bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800"
         >
           Go to sign in
         </Link>
@@ -176,7 +176,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-8 shadow-sm">
+    <div>
       <h1 className="text-2xl font-semibold tracking-tight">Set a new password</h1>
       <p className="mt-1 text-sm text-text-muted">
         Choose a strong password you don&apos;t use anywhere else.
@@ -211,7 +211,7 @@ function ResetPasswordForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="h-10 w-full rounded-md bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:opacity-60"
+          className="h-12 w-full rounded-lg bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:opacity-60"
         >
           {submitting ? 'Updating…' : 'Update password'}
         </button>

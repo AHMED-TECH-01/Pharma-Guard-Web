@@ -14,14 +14,26 @@
   --color-primary-700: #07875f;
   --color-primary-600: #0a9a69;
   --color-primary-500: #16a878;
+  --color-primary-100: #dcf3e8;
+  --color-primary-50: #eefaf4;
 
   --color-surface: #ffffff;
   --color-surface-muted: #f7faf9;
   --color-background: #f5f7f7;
 
   --color-text: #17201e;
+  --color-text-secondary: #4b5652;
   --color-text-muted: #6b7774;
+  --color-text-faint: #94a19b;
   --color-border: #e3e9e7;
+  --color-border-subtle: #edf1ef;
+
+  /* Surface aliases for the established utility names (bg-card, bg-subtle,
+     bg-bg-card, bg-bg-subtle) so every card/skeleton/hover surface resolves. */
+  --color-card: #ffffff;
+  --color-subtle: #eef3f1;
+  --color-bg-card: #ffffff;
+  --color-bg-subtle: #eef3f1;
 
   --color-success: #149447;
   --color-warning: #f59e0b;
@@ -75,14 +87,24 @@
   --color-primary-700: var(--color-primary-700);
   --color-primary-600: var(--color-primary-600);
   --color-primary-500: var(--color-primary-500);
+  --color-primary-100: var(--color-primary-100);
+  --color-primary-50: var(--color-primary-50);
 
   --color-surface: var(--color-surface);
   --color-surface-muted: var(--color-surface-muted);
   --color-background: var(--color-background);
 
   --color-text: var(--color-text);
+  --color-text-secondary: var(--color-text-secondary);
   --color-text-muted: var(--color-text-muted);
+  --color-text-faint: var(--color-text-faint);
   --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+
+  --color-card: var(--color-card);
+  --color-subtle: var(--color-subtle);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-subtle: var(--color-bg-subtle);
 
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);

@@ -1,11 +1,12 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useState, type ComponentType } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
  * PasswordField (ui-registry §5, ui-rules §8): labeled password input with
- * a show/hide toggle. The toggle announces its state to screen readers.
+ * an optional leading icon and a show/hide toggle. The toggle announces its
+ * state to screen readers.
  */
 
 interface PasswordFieldProps {
@@ -17,6 +18,7 @@ interface PasswordFieldProps {
   error?: string | null;
   required?: boolean;
   disabled?: boolean;
+  leadingIcon?: ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
 }
 
 export function PasswordField({
@@ -28,6 +30,7 @@ export function PasswordField({
   error = null,
   required = false,
   disabled = false,
+  leadingIcon: LeadingIcon,
 }: PasswordFieldProps) {
   const id = useId();
   const [visible, setVisible] = useState(false);
@@ -38,6 +41,12 @@ export function PasswordField({
         {label}
       </label>
       <div className="relative">
+        {LeadingIcon ? (
+          <LeadingIcon
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+            aria-hidden
+          />
+        ) : null}
         <input
           id={id}
           type={visible ? 'text' : 'password'}
@@ -48,9 +57,9 @@ export function PasswordField({
           required={required}
           disabled={disabled}
           aria-invalid={error ? true : undefined}
-          className={`h-10 w-full rounded-md border bg-surface px-3 pr-10 text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 disabled:opacity-60 ${
-            error ? 'border-status-critical-border' : 'border-border'
-          }`}
+          className={`h-12 w-full rounded-lg border bg-surface text-sm outline-none transition-colors duration-150 placeholder:text-text-muted focus:border-primary-600 disabled:opacity-60 ${
+            LeadingIcon ? 'pl-10 pr-10' : 'px-3 pr-10'
+          } ${error ? 'border-status-critical-border' : 'border-border'}`}
         />
         <button
           type="button"

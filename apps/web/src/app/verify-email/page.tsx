@@ -15,7 +15,8 @@ import { OTPInput } from '@/components/auth/otp-input';
  * email-verification OTP flow. The 6-digit code is generated, hashed,
  * stored, expired (10 minutes), and attempt-limited entirely by Supabase
  * Auth (GoTrue) - this page only submits it via verifyOtp (approved public
- * auth operation, architecture.md §3). The confirmed session is then handed
+ * auth operation, architecture.md §6); delivery goes through Gmail SMTP
+ * configured in the Supabase dashboard. The confirmed session is then handed
  * to the backend POST /auth/session, which re-validates it server-side and
  * issues the HttpOnly application cookies; the browser session is discarded
  * by design (persistSession: false).
@@ -26,20 +27,12 @@ const RESEND_COOLDOWN_SECONDS = 60;
 type VerifyErrorKind = 'invalid' | 'expired' | 'tooMany' | null;
 
 const VERIFY_ERROR_MESSAGES: Record<Exclude<VerifyErrorKind, null>, string> = {
-  invalid: 'That verification code is incorrect. Please try again.',
-  expired: 'This verification code has expired. Request a new code.',
+  invalid: 'Invalid verification code. Please check the code and try again.',
+  expired: 'This verification code has expired. Please request a new code.',
   tooMany: 'Too many verification attempts. Please request a new code.',
 };
 
 const NETWORK_ERROR_MESSAGE = 'Something went wrong. Check your connection and try again.';
-
-function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  if (!local || !domain) {
-    return email;
-  }
-  return `${local.slice(0, 1)}***@${domain}`;
-}
 
 function mapOtpError(code: string, message: string): VerifyErrorKind {
   if (code === 'otp_expired' || /expired/i.test(message)) {
@@ -139,7 +132,7 @@ function VerifyEmailForm() {
       // Anti-enumeration: the response is identical for unknown accounts.
       await api.post('/auth/resend-verification', { email });
       setCooldown(RESEND_COOLDOWN_SECONDS);
-      setResendInfo(`A new verification code is on its way to ${maskEmail(email)}.`);
+      setResendInfo(`A new verification code is on its way to ${email}.`);
     } catch (cause) {
       setResendError(
         cause instanceof ApiClientError && cause.message ? cause.message : NETWORK_ERROR_MESSAGE,
@@ -189,11 +182,9 @@ function VerifyEmailForm() {
         <span className="flex size-12 items-center justify-center rounded-full bg-primary-50">
           <MailCheck className="size-6 text-primary-700" aria-hidden />
         </span>
-        <h1 className="mt-4 text-2xl font-semibold tracking-tight">Verify your email</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Enter the 6-digit verification code sent to your email.
-        </p>
-        <p className="mt-1 text-sm font-medium text-text">{maskEmail(email)}</p>
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight">Check your email</h1>
+        <p className="mt-1 text-sm text-text-muted">We&apos;ve sent a verification code to:</p>
+        <p className="mt-1 text-sm font-medium text-text">{email}</p>
 
         <form
           onSubmit={(event) => {
@@ -217,9 +208,9 @@ function VerifyEmailForm() {
           <button
             type="submit"
             disabled={code.length !== 6 || verifying || verified}
-            className="h-10 w-full rounded-md bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-12 w-full rounded-lg bg-primary-700 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {verifying ? 'Verifying…' : 'Verify Code'}
+            {verifying ? 'Verifying…' : 'Verify'}
           </button>
         </form>
 
