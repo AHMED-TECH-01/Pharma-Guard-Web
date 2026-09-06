@@ -13,8 +13,8 @@ import { formatRelativeTime } from '@/lib/format';
 
 /**
  * Full audit timeline (/compliance/audit, PRD §10.19): filterable, paginated
- * audit trail plus per-user activity over the last 30 days. OWNER/MANAGER
- * (audit.read).
+ * audit trail plus per-user activity over the last 30 days. Available to
+ * every authenticated member (enforced server-side).
  */
 
 interface AppliedFilters {
@@ -59,7 +59,6 @@ export function AuditPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('audit.read') ?? false;
 
   const loadEntries = useCallback(
     (signal?: AbortSignal) => {
@@ -87,14 +86,14 @@ export function AuditPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadEntries(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadEntries]);
+  }, [checked, pharmacyId, loadEntries]);
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     api
       .get<AuditUsersResponse>('/audit/users', { pharmacyId, signal: controller.signal })
@@ -105,7 +104,7 @@ export function AuditPage() {
         // Activity summary is supplementary; the timeline still loads.
       });
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead]);
+  }, [checked, pharmacyId]);
 
   async function handleLogout() {
     setLogoutPending(true);
@@ -136,15 +135,6 @@ export function AuditPage() {
         />
       );
     }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to the audit timeline"
-          description="Audit records are available to the pharmacy owner and managers."
-        />
-      );
-    }
-
     const totalPages =
       entries === null ? 0 : Math.max(1, Math.ceil(entries.total / entries.pageSize));
 

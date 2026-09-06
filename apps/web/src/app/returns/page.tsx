@@ -70,8 +70,6 @@ export default function ReturnsPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('returns.read') ?? false;
-  const canWrite = session?.permissions.includes('returns.write') ?? false;
 
   const loadReturns = useCallback(
     (signal?: AbortSignal) => {
@@ -107,11 +105,11 @@ export default function ReturnsPage() {
   }, [searchInput]);
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadReturns(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadReturns]);
+  }, [checked, pharmacyId, loadReturns]);
 
   function loadSuppliers() {
     if (!pharmacyId) return;
@@ -181,14 +179,6 @@ export default function ReturnsPage() {
         />
       );
     }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to returns"
-          description="Ask the pharmacy owner for the returns.read permission."
-        />
-      );
-    }
     if (loadError) {
       return (
         <ErrorState
@@ -204,7 +194,7 @@ export default function ReturnsPage() {
           title={statusFilter === 'ALL' && !search ? 'No returns recorded' : 'No returns match your filters'}
           description="Returns to suppliers appear here; stock leaves at approval."
           action={
-            canWrite && statusFilter === 'ALL' && !search ? (
+            statusFilter === 'ALL' && !search ? (
               <button
                 type="button"
                 className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
@@ -229,7 +219,6 @@ export default function ReturnsPage() {
         ) : null}
         <ReturnTable
           returns={data.returns}
-          canWrite={canWrite}
           busyId={busyId}
           onAction={(item, action) => {
             setActionError(null);
@@ -263,21 +252,18 @@ export default function ReturnsPage() {
             <h1 className="text-xl font-semibold tracking-tight text-text-primary">Returns Management</h1>
             <p className="mt-0.5 text-sm text-text-muted">Track and manage all your supplier returns.</p>
           </div>
-          {canWrite ? (
-            <button
-              type="button"
-              className="inline-flex h-9 items-center rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
-              onClick={() => {
-                loadSuppliers();
-                setFormOpen(true);
-              }}
-            >
-              + New Return
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="inline-flex h-9 items-center rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
+            onClick={() => {
+              loadSuppliers();
+              setFormOpen(true);
+            }}
+          >
+            + New Return
+          </button>
         </header>
-        {canRead ? (
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
             <input
               type="search"
               value={searchInput}
@@ -301,8 +287,7 @@ export default function ReturnsPage() {
                 </option>
               ))}
             </select>
-          </div>
-        ) : null}
+        </div>
         {renderContent()}
       </div>
 

@@ -7,7 +7,9 @@ import { StockBadge } from '@/components/ui/badges';
 
 /**
  * MedicineDetailHeader (ui-registry §7): identity block + stock summary +
- * write actions. Action visibility is capability-driven.
+ * write actions. Editing is a normal feature for every authenticated member;
+ * archive (destructive) stays restricted to owners/managers, enforced again
+ * by the API.
  */
 
 interface MedicineDetailHeaderProps {
@@ -22,7 +24,6 @@ interface MedicineDetailHeaderProps {
   reorderLevel: number;
   isArchived: boolean;
   stock: MedicineStockSummary;
-  canWrite: boolean;
   canDelete: boolean;
   onEdit: () => void;
   onArchive: () => void;
@@ -40,7 +41,6 @@ export function MedicineDetailHeader({
   reorderLevel,
   isArchived,
   stock,
-  canWrite,
   canDelete,
   onEdit,
   onArchive,
@@ -80,29 +80,27 @@ export function MedicineDetailHeader({
           </p>
         </div>
 
-        {canWrite ? (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium transition hover:bg-surface-muted"
+          >
+            <Pencil className="size-4" aria-hidden />
+            Edit
+          </button>
+          {canDelete && !isArchived ? (
             <button
               type="button"
-              onClick={onEdit}
+              onClick={onArchive}
+              title="Archive keeps history but removes the medicine from active lists"
               className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium transition hover:bg-surface-muted"
             >
-              <Pencil className="size-4" aria-hidden />
-              Edit
+              <Archive className="size-4" aria-hidden />
+              Archive
             </button>
-            {canDelete && !isArchived ? (
-              <button
-                type="button"
-                onClick={onArchive}
-                title="Archive keeps history but removes the medicine from active lists"
-                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium transition hover:bg-surface-muted"
-              >
-                <Archive className="size-4" aria-hidden />
-                Archive
-              </button>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">

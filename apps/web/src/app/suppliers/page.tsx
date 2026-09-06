@@ -47,8 +47,6 @@ export default function SuppliersPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('suppliers.read') ?? false;
-  const canWrite = session?.permissions.includes('suppliers.write') ?? false;
 
   const loadSuppliers = useCallback(
     (signal?: AbortSignal) => {
@@ -70,11 +68,11 @@ export default function SuppliersPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadSuppliers(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadSuppliers]);
+  }, [checked, pharmacyId, loadSuppliers]);
 
   async function handleLogout() {
     setLogoutPending(true);
@@ -149,14 +147,6 @@ export default function SuppliersPage() {
         />
       );
     }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to suppliers"
-          description="Ask the pharmacy owner for the suppliers.read permission."
-        />
-      );
-    }
     if (loadError) {
       return (
         <ErrorState
@@ -172,15 +162,13 @@ export default function SuppliersPage() {
           title="No suppliers yet"
           description="Add the distributors you buy from to link them to purchase records."
           action={
-            canWrite ? (
-              <button
-                type="button"
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
-                onClick={() => setFormOpen(true)}
-              >
-                Add supplier
-              </button>
-            ) : null
+            <button
+              type="button"
+              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
+              onClick={() => setFormOpen(true)}
+            >
+              Add supplier
+            </button>
           }
         />
       );
@@ -242,19 +230,17 @@ export default function SuppliersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      {canWrite ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditing(supplier);
-                            setFormOpen(true);
-                          }}
-                          className="rounded-md p-1.5 text-text-muted transition hover:bg-surface-muted hover:text-text-primary"
-                          aria-label={`Edit ${supplier.name}`}
-                        >
-                          <Pencil className="size-4" aria-hidden />
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditing(supplier);
+                          setFormOpen(true);
+                        }}
+                        className="rounded-md p-1.5 text-text-muted transition hover:bg-surface-muted hover:text-text-primary"
+                        aria-label={`Edit ${supplier.name}`}
+                      >
+                        <Pencil className="size-4" aria-hidden />
+                      </button>
                       <Link
                         href={`/suppliers/${supplier.id}`}
                         className="rounded-md p-1.5 text-text-muted transition hover:bg-surface-muted hover:text-text-primary"
@@ -287,18 +273,16 @@ export default function SuppliersPage() {
             <h1 className="text-xl font-semibold tracking-tight text-text-primary">Suppliers</h1>
             <p className="mt-0.5 text-sm text-text-muted">Manage your suppliers and distributors.</p>
           </div>
-          {canWrite ? (
-            <button
-              type="button"
-              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              + Add Supplier
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            + Add Supplier
+          </button>
         </header>
         {renderContent()}
       </div>

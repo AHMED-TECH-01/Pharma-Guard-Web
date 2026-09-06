@@ -21,14 +21,12 @@ const RECALL_STATUS_OPTIONS: { value: RecallStatus; label: string }[] = [
 
 interface RecallCardProps {
   recall: RecallListItem;
-  canWrite: boolean;
-  canQuarantine: boolean;
   onOpen: () => void;
   onUpdateStatus: (status: RecallStatus) => Promise<void>;
   onQuarantine: () => Promise<void>;
 }
 
-export function RecallCard({ recall, canWrite, canQuarantine, onOpen, onUpdateStatus, onQuarantine }: RecallCardProps) {
+export function RecallCard({ recall, onOpen, onUpdateStatus, onQuarantine }: RecallCardProps) {
   const [busy, setBusy] = useState<'status' | 'quarantine' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,22 +71,20 @@ export function RecallCard({ recall, canWrite, canQuarantine, onOpen, onUpdateSt
           >
             Details
           </button>
-          {canWrite ? (
-            <select
-              value={recall.status}
-              disabled={busy !== null}
-              onChange={(event) => run('status', () => onUpdateStatus(event.target.value as RecallStatus))}
-              aria-label={`Update status of ${title}`}
-              className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50"
-            >
-              {RECALL_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          {canQuarantine && quarantinable ? (
+          <select
+            value={recall.status}
+            disabled={busy !== null}
+            onChange={(event) => run('status', () => onUpdateStatus(event.target.value as RecallStatus))}
+            aria-label={`Update status of ${title}`}
+            className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50"
+          >
+            {RECALL_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {quarantinable ? (
             <button
               type="button"
               disabled={busy !== null}

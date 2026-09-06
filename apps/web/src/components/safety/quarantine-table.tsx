@@ -6,16 +6,16 @@ import { QuarantineBadge } from '@/components/ui/badges';
 
 /**
  * Quarantine register (PRD §10.15): batches held out of circulation, with
- * the resolve entry point for QUARANTINED rows.
+ * the resolve entry point for QUARANTINED rows. The API authorizes and
+ * audits every resolution.
  */
 
 interface QuarantineTableProps {
   items: QuarantineListItem[];
-  canAct: boolean;
   onResolve: (item: QuarantineListItem) => void;
 }
 
-export function QuarantineTable({ items, canAct, onResolve }: QuarantineTableProps) {
+export function QuarantineTable({ items, onResolve }: QuarantineTableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border-subtle bg-bg-card">
       <table className="w-full min-w-[720px] text-left text-sm">
@@ -26,11 +26,9 @@ export function QuarantineTable({ items, canAct, onResolve }: QuarantineTablePro
             <th scope="col" className="px-4 py-3 font-medium">Reason</th>
             <th scope="col" className="px-4 py-3 font-medium">Quarantined</th>
             <th scope="col" className="px-4 py-3 font-medium">Status</th>
-            {canAct ? (
-              <th scope="col" className="px-4 py-3 text-right font-medium">
-                <span className="sr-only">Resolve</span>
-              </th>
-            ) : null}
+            <th scope="col" className="px-4 py-3 text-right font-medium">
+              <span className="sr-only">Resolve</span>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border-subtle">
@@ -56,19 +54,17 @@ export function QuarantineTable({ items, canAct, onResolve }: QuarantineTablePro
                   <p className="mt-1 text-xs text-text-muted">{formatRelativeTime(item.resolvedAt)}</p>
                 ) : null}
               </td>
-              {canAct ? (
-                <td className="px-4 py-3 text-right">
-                  {item.status === 'QUARANTINED' ? (
-                    <button
-                      type="button"
-                      onClick={() => onResolve(item)}
-                      className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-primary transition hover:bg-surface-muted"
-                    >
-                      Resolve
-                    </button>
-                  ) : null}
-                </td>
-              ) : null}
+              <td className="px-4 py-3 text-right">
+                {item.status === 'QUARANTINED' ? (
+                  <button
+                    type="button"
+                    onClick={() => onResolve(item)}
+                    className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-primary transition hover:bg-surface-muted"
+                  >
+                    Resolve
+                  </button>
+                ) : null}
+              </td>
             </tr>
           ))}
         </tbody>

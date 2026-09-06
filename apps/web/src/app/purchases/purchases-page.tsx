@@ -44,8 +44,6 @@ export function PurchasesPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('purchases.read') ?? false;
-  const canWrite = session?.permissions.includes('purchases.write') ?? false;
 
   const loadPurchases = useCallback(
     (targetPage: number, signal?: AbortSignal) => {
@@ -67,11 +65,11 @@ export function PurchasesPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadPurchases(page, controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, page, loadPurchases]);
+  }, [checked, pharmacyId, page, loadPurchases]);
 
   function patchPage(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -109,14 +107,6 @@ export function PurchasesPage() {
         />
       );
     }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to purchase history"
-          description="Ask the pharmacy owner for the purchases.read permission."
-        />
-      );
-    }
     if (loadError) {
       return (
         <ErrorState
@@ -132,14 +122,12 @@ export function PurchasesPage() {
           title="No purchases recorded"
           description="Receive stock to build the purchase history."
           action={
-            canWrite ? (
-              <Link
-                href="/purchases/new"
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
-              >
-                Receive stock
-              </Link>
-            ) : null
+            <Link
+              href="/purchases/new"
+              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
+            >
+              Receive stock
+            </Link>
           }
         />
       );
@@ -171,17 +159,15 @@ export function PurchasesPage() {
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-text-primary">Purchases</h1>
             <p className="mt-0.5 text-sm text-text-muted">
-              {canRead && data ? `${data.total} purchase${data.total === 1 ? '' : 's'} received` : 'Receiving history and stock increments'}
+              {data ? `${data.total} purchase${data.total === 1 ? '' : 's'} received` : 'Receiving history and stock increments'}
             </p>
           </div>
-          {canWrite ? (
-            <Link
-              href="/purchases/new"
-              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
-            >
-              Receive stock
-            </Link>
-          ) : null}
+          <Link
+            href="/purchases/new"
+            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
+          >
+            Receive stock
+          </Link>
         </header>
         {renderContent()}
       </div>

@@ -80,8 +80,6 @@ export function ReordersPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('reorders.read') ?? false;
-  const canWrite = session?.permissions.includes('reorders.write') ?? false;
 
   const loadRecommendations = useCallback(
     (signal?: AbortSignal) => {
@@ -129,18 +127,18 @@ export function ReordersPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadRecommendations(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadRecommendations]);
+  }, [checked, pharmacyId, loadRecommendations]);
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadHistory(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadHistory]);
+  }, [checked, pharmacyId, loadHistory]);
 
   function patchWindowParams(nextObserved: number, nextLead: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -217,15 +215,6 @@ export function ReordersPage() {
         />
       );
     }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to reorders"
-          description="Ask the pharmacy owner for the reorders.read permission."
-        />
-      );
-    }
-
     return (
       <div className="space-y-6">
         {actionError ? (
@@ -297,7 +286,6 @@ export function ReordersPage() {
                 <ReorderCard
                   key={recommendation.medicineId}
                   recommendation={recommendation}
-                  canWrite={canWrite}
                   busy={busyMedicineId === recommendation.medicineId}
                   onRecord={(entry) => void handleRecord(entry.medicineId)}
                 />
@@ -360,26 +348,24 @@ export function ReordersPage() {
                             {record.status.charAt(0) + record.status.slice(1).toLowerCase()}
                           </span>
                         </td>
-                        {canWrite ? (
-                          <td className="px-4 py-3 text-right">
-                            {record.status === 'SUGGESTED' || record.status === 'ORDERED' ? (
-                              <select
-                                aria-label={`Update status for ${record.medicineName}`}
-                                className={selectClasses}
-                                value={record.status}
-                                disabled={recordBusy !== null}
-                                onChange={(event) =>
-                                  void handleRecordStatus(record, event.target.value as ReorderStatus)
-                                }
-                              >
-                                {record.status === 'SUGGESTED' ? <option value="SUGGESTED">Suggested</option> : null}
-                                <option value="ORDERED">Ordered</option>
-                                <option value="RECEIVED">Received</option>
-                                <option value="DISMISSED">Dismissed</option>
-                              </select>
-                            ) : null}
-                          </td>
-                        ) : null}
+                        <td className="px-4 py-3 text-right">
+                          {record.status === 'SUGGESTED' || record.status === 'ORDERED' ? (
+                            <select
+                              aria-label={`Update status for ${record.medicineName}`}
+                              className={selectClasses}
+                              value={record.status}
+                              disabled={recordBusy !== null}
+                              onChange={(event) =>
+                                void handleRecordStatus(record, event.target.value as ReorderStatus)
+                              }
+                            >
+                              {record.status === 'SUGGESTED' ? <option value="SUGGESTED">Suggested</option> : null}
+                              <option value="ORDERED">Ordered</option>
+                              <option value="RECEIVED">Received</option>
+                              <option value="DISMISSED">Dismissed</option>
+                            </select>
+                          ) : null}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

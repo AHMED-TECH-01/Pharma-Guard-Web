@@ -11,10 +11,10 @@ import { formatDate } from '@/lib/format';
 import { InviteDialog, type InviteFormValues } from '@/components/users/invite-dialog';
 
 /**
- * Team roster (PRD §10.21 Settings > Roles, ui-registry Phase 12). Owners
- * manage roles and membership; managers can view. Self-changes are blocked
- * client-side and server-side, and the role matrix documents each role's
- * capabilities.
+ * Team roster (PRD §10.21 Settings > Roles, ui-registry Phase 12). Every
+ * authenticated member can view the roster; owners manage roles and
+ * membership (users.manage). Self-changes are blocked client-side and
+ * server-side, and the role matrix documents each role's capabilities.
  */
 
 const ROLE_OPTIONS: UserRole[] = ['OWNER', 'MANAGER', 'PHARMACIST', 'STAFF'];
@@ -31,11 +31,13 @@ const STATUS_LABEL: Record<string, string> = {
   suspended: 'Suspended',
 };
 
+// Roles no longer gate normal features - every role has the full
+// operational set. The matrix documents the remaining administrative scope.
 const ROLE_MATRIX: Array<{ role: UserRole; summary: string }> = [
-  { role: 'OWNER', summary: 'Full control: team, pharmacy settings, billing contact, everything below' },
-  { role: 'MANAGER', summary: 'Runs operations: inventory, sales, purchases, analytics, reports, audit read' },
-  { role: 'PHARMACIST', summary: 'Day-to-day stock: inventory edits, sales, expiry actions, returns, OCR' },
-  { role: 'STAFF', summary: 'Counter access: record sales, view stock and alerts' },
+  { role: 'OWNER', summary: 'Full operational access, plus team management and pharmacy settings' },
+  { role: 'MANAGER', summary: 'Full operational access: inventory, sales, purchases, suppliers, analytics, reports' },
+  { role: 'PHARMACIST', summary: 'Full operational access: stock, sales, expiry actions, returns, quarantine, AI Scan' },
+  { role: 'STAFF', summary: 'Full operational access: sales, inventory, expiry, alerts, reorders' },
 ];
 
 const SELECT_CLASS =
@@ -72,7 +74,8 @@ export default function UsersPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('users.read') ?? false;
+  // Viewing the roster is a normal feature for every member; changing roles,
+  // inviting, or removing members stays restricted (users.manage, OWNER-only).
   const canManage = session?.permissions.includes('users.manage') ?? false;
   const currentUserId = session?.user.userId ?? null;
 
@@ -96,11 +99,11 @@ export default function UsersPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadMembers(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadMembers]);
+  }, [checked, pharmacyId, loadMembers]);
 
   async function handleLogout() {
     setLogoutPending(true);
@@ -173,14 +176,6 @@ export default function UsersPage() {
         <EmptyState
           title="No pharmacy selected"
           description="Create or select a pharmacy before managing the team."
-        />
-      );
-    }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to the team roster"
-          description="Ask the pharmacy owner for the users.read permission."
         />
       );
     }
@@ -337,7 +332,7 @@ export default function UsersPage() {
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-text-primary">Users</h1>
             <p className="mt-0.5 text-sm text-text-muted">
-              {canRead && data ? `${data.members.length} member${data.members.length === 1 ? '' : 's'}` : 'Team, roles, and access'}
+              {data ? `${data.members.length} member${data.members.length === 1 ? '' : 's'}` : 'Team, roles, and access'}
             </p>
           </div>
           {canManage ? (

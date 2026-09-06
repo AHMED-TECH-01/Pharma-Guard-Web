@@ -24,8 +24,6 @@ const selectClasses =
 
 interface RecallDialogProps {
   recall: RecallDetail | null;
-  canWrite: boolean;
-  canQuarantine: boolean;
   onClose: () => void;
   onUpdateStatus: (status: RecallStatus) => Promise<void>;
   onQuarantine: () => Promise<void>;
@@ -33,8 +31,6 @@ interface RecallDialogProps {
 
 export function RecallDialog({
   recall,
-  canWrite,
-  canQuarantine,
   onClose,
   onUpdateStatus,
   onQuarantine,
@@ -143,32 +139,28 @@ export function RecallDialog({
           ) : null}
 
           <div className="flex flex-wrap items-center gap-3">
-            {canWrite ? (
-              <>
-                <select
-                  value={statusDraft}
-                  disabled={busy !== null}
-                  onChange={(event) => setStatusDraft(event.target.value as RecallStatus)}
-                  aria-label="Recall status"
-                  className={selectClasses}
-                >
-                  {RECALL_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  disabled={busy !== null || statusDraft === recall.status}
-                  onClick={() => run('status', () => onUpdateStatus(statusDraft))}
-                  className="inline-flex h-9 items-center rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
-                >
-                  {busy === 'status' ? 'Updating…' : 'Update status'}
-                </button>
-              </>
-            ) : null}
-            {canQuarantine && (recall.status === 'OPEN' || recall.status === 'IN_PROGRESS') ? (
+            <select
+              value={statusDraft}
+              disabled={busy !== null}
+              onChange={(event) => setStatusDraft(event.target.value as RecallStatus)}
+              aria-label="Recall status"
+              className={selectClasses}
+            >
+              {RECALL_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={busy !== null || statusDraft === recall.status}
+              onClick={() => run('status', () => onUpdateStatus(statusDraft))}
+              className="inline-flex h-9 items-center rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
+            >
+              {busy === 'status' ? 'Updating…' : 'Update status'}
+            </button>
+            {recall.status === 'OPEN' || recall.status === 'IN_PROGRESS' ? (
               <button
                 type="button"
                 disabled={busy !== null}

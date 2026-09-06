@@ -7,9 +7,10 @@ import { EmptyState } from '@/components/ui/states';
 import { api, type SessionData } from '@/lib/api';
 
 /**
- * Pharmacy information (PRD §10.21). Every member can view; only the owner
- * (settings.manage) can edit. Currency is display-only - it is chosen at
- * onboarding and kept stable so historical amounts stay meaningful.
+ * Pharmacy information (PRD §10.21). Every authenticated member can view and
+ * update these details; the API authorizes and audits the change. Currency is
+ * display-only - it is chosen at onboarding and kept stable so historical
+ * amounts stay meaningful.
  */
 
 const INPUT_CLASS =
@@ -18,7 +19,6 @@ const LABEL_CLASS = 'mb-1 block text-sm font-medium text-text-secondary';
 
 function PharmacyForm({ session }: { session: SessionData }) {
   const pharmacyId = session.activePharmacy?.pharmacyId ?? null;
-  const canManage = session.permissions.includes('settings.manage');
 
   const [settings, setSettings] = useState<PharmacySettings | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -95,7 +95,7 @@ function PharmacyForm({ session }: { session: SessionData }) {
       className="max-w-lg space-y-4 rounded-lg border border-border bg-bg-card p-5"
       onSubmit={(event) => {
         event.preventDefault();
-        if (canManage) void submit();
+        void submit();
       }}
     >
       <div>
@@ -105,7 +105,6 @@ function PharmacyForm({ session }: { session: SessionData }) {
           className={INPUT_CLASS}
           value={name}
           onChange={(event) => setName(event.target.value)}
-          disabled={!canManage}
           required
         />
       </div>
@@ -116,7 +115,6 @@ function PharmacyForm({ session }: { session: SessionData }) {
           className={INPUT_CLASS}
           value={ownerName}
           onChange={(event) => setOwnerName(event.target.value)}
-          disabled={!canManage}
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -128,7 +126,6 @@ function PharmacyForm({ session }: { session: SessionData }) {
             className={INPUT_CLASS}
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
-            disabled={!canManage}
           />
         </div>
         <div>
@@ -139,7 +136,6 @@ function PharmacyForm({ session }: { session: SessionData }) {
             className={INPUT_CLASS}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            disabled={!canManage}
           />
         </div>
       </div>
@@ -151,7 +147,6 @@ function PharmacyForm({ session }: { session: SessionData }) {
           className={INPUT_CLASS}
           value={address}
           onChange={(event) => setAddress(event.target.value)}
-          disabled={!canManage}
         />
       </div>
       <div>
@@ -164,27 +159,19 @@ function PharmacyForm({ session }: { session: SessionData }) {
         />
         <p className="mt-1 text-xs text-text-muted">Set at onboarding; shown on all money fields.</p>
       </div>
-      {canManage ? (
-        <>
-          {saved ? (
-            <p role="status" className="text-sm font-medium text-status-safe-fg">Pharmacy details updated.</p>
-          ) : null}
-          {error ? (
-            <p role="alert" className="text-sm text-status-critical-fg">{error}</p>
-          ) : null}
-          <button
-            type="submit"
-            disabled={pending || name.trim().length < 2}
-            className="h-9 min-w-28 rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
-          >
-            {pending ? 'Saving…' : 'Save changes'}
-          </button>
-        </>
-      ) : (
-        <p className="text-xs text-text-muted">
-          Only the pharmacy owner can change these details.
-        </p>
-      )}
+      {saved ? (
+        <p role="status" className="text-sm font-medium text-status-safe-fg">Pharmacy details updated.</p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-sm text-status-critical-fg">{error}</p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={pending || name.trim().length < 2}
+        className="h-9 min-w-28 rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
+      >
+        {pending ? 'Saving…' : 'Save changes'}
+      </button>
     </form>
   );
 }

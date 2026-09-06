@@ -48,13 +48,12 @@ const SNOOZE_OPTIONS = [1, 3, 7, 14, 30];
 
 interface AlertCardProps {
   alert: AlertListItem;
-  canAct: boolean;
   onRead: (id: string) => Promise<void>;
   onResolve: (id: string) => Promise<void>;
   onSnooze: (id: string, days: number) => Promise<void>;
 }
 
-export function AlertCard({ alert, canAct, onRead, onResolve, onSnooze }: AlertCardProps) {
+export function AlertCard({ alert, onRead, onResolve, onSnooze }: AlertCardProps) {
   const [snoozeDays, setSnoozeDays] = useState('7');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +76,7 @@ export function AlertCard({ alert, canAct, onRead, onResolve, onSnooze }: AlertC
     }
   }
 
-  const actionable = canAct && alert.status !== 'RESOLVED';
+  const actionable = alert.status !== 'RESOLVED';
 
   return (
     <article className="rounded-lg border border-border-subtle bg-bg-card p-4">

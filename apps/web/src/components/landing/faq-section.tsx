@@ -15,7 +15,7 @@ const FAQS = [
   },
   {
     q: 'Can my staff use it too?',
-    a: 'Yes. Invite users with OWNER, MANAGER, PHARMACIST or STAFF roles - each role sees and can do only what it should.',
+    a: 'Yes. Invite users with OWNER, MANAGER, PHARMACIST or STAFF roles - every member gets full access to normal features, with owner-only control for team management.',
   },
   {
     q: 'What happens to my data?',

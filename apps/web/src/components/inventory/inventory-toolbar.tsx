@@ -10,7 +10,8 @@ import type {
 /**
  * InventoryToolbar (ui-registry §7, reference: search + Status + Sort By +
  * Add Medicine). Search debounces 300ms before it reaches the URL query
- * (TRD §17 - list state lives in the URL).
+ * (TRD §17 - list state lives in the URL). The API authorizes and audits
+ * every action.
  */
 
 const STATUS_OPTIONS: { value: InventoryBatchStatusFilter; label: string }[] = [
@@ -37,7 +38,6 @@ interface InventoryToolbarProps {
   status: InventoryBatchStatusFilter;
   sort: InventoryBatchSortKey;
   order: 'asc' | 'desc';
-  canWrite: boolean;
   onSearchChange: (search: string) => void;
   onStatusChange: (status: InventoryBatchStatusFilter) => void;
   onSortChange: (sort: InventoryBatchSortKey) => void;
@@ -50,7 +50,6 @@ export function InventoryToolbar({
   status,
   sort,
   order,
-  canWrite,
   onSearchChange,
   onStatusChange,
   onSortChange,
@@ -127,16 +126,14 @@ export function InventoryToolbar({
         {order === 'asc' ? '↑ Asc' : '↓ Desc'}
       </button>
 
-      {canWrite ? (
-        <button
-          type="button"
-          onClick={onAddMedicine}
-          className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
-        >
-          <Plus className="size-4" aria-hidden />
-          Add Medicine
-        </button>
-      ) : null}
+      <button
+        type="button"
+        onClick={onAddMedicine}
+        className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
+      >
+        <Plus className="size-4" aria-hidden />
+        Add Medicine
+      </button>
     </div>
   );
 }

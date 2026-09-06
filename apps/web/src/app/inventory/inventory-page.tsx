@@ -66,7 +66,6 @@ export function InventoryPageContent() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canWrite = session?.permissions.includes('inventory.write') ?? false;
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -211,7 +210,7 @@ export function InventoryPageContent() {
               >
                 Clear filters
               </button>
-            ) : canWrite ? (
+            ) : (
               <button
                 type="button"
                 onClick={() => setAddOpen(true)}
@@ -219,7 +218,7 @@ export function InventoryPageContent() {
               >
                 Add Medicine
               </button>
-            ) : null
+            )
           }
         />
       );
@@ -265,7 +264,6 @@ export function InventoryPageContent() {
             status={query.status}
             sort={query.sort}
             order={query.order}
-            canWrite={canWrite}
             onSearchChange={handleSearchChange}
             onStatusChange={handleStatusChange}
             onSortChange={handleSortChange}

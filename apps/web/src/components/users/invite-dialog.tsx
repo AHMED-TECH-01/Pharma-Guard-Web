@@ -147,12 +147,14 @@ export function InviteDialog({ open, pending, onSubmit, onClose }: InviteDialogP
               value={role}
               onChange={(event) => setRole(event.target.value as InviteFormValues['role'])}
             >
-              <option value="MANAGER">Manager - runs operations, reads audit</option>
-              <option value="PHARMACIST">Pharmacist - inventory, sales, expiry</option>
-              <option value="STAFF">Staff - record sales, view stock</option>
+              <option value="MANAGER">Manager</option>
+              <option value="PHARMACIST">Pharmacist</option>
+              <option value="STAFF">Staff</option>
             </select>
             <p className="mt-1.5 text-xs text-text-muted">
-              New members cannot be created as Owner. Promote an existing member later if needed.
+              Every member has full access to normal features; only owners manage the team and
+              membership. New members cannot be created as Owner - promote an existing member
+              later if needed.
             </p>
           </div>
           {error ? (

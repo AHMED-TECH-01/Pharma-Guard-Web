@@ -10,8 +10,7 @@ import { Modal } from '@/components/ui/modal';
  * Bulk action bar (PRD §10.9): appears when expiry batches are selected and
  * offers mark removed / mark returned / quarantine. Every action demands a
  * reason (validation: 3-500 chars) so the audit trail explains the decision.
- * QUARANTINE needs the quarantine capability; REMOVE/RETURN need expiry.act -
- * the server enforces this per action and the UI mirrors it.
+ * The API authorizes and audits each action.
  */
 
 const ACTION_TITLES: Record<ExpiryAction, string> = {
@@ -28,26 +27,19 @@ const ACTION_DESCRIPTIONS: Record<ExpiryAction, string> = {
 
 interface BulkActionBarProps {
   selectedCount: number;
-  canExpiryAct: boolean;
-  canQuarantineAct: boolean;
   onRun: (action: ExpiryAction, reason: string) => Promise<void>;
 }
 
-export function BulkActionBar({
-  selectedCount,
-  canExpiryAct,
-  canQuarantineAct,
-  onRun,
-}: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, onRun }: BulkActionBarProps) {
   const [pendingAction, setPendingAction] = useState<ExpiryAction | null>(null);
   const [reason, setReason] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const actions: { action: ExpiryAction; label: string; icon: LucideIcon; allowed: boolean }[] = [
-    { action: 'REMOVE', label: 'Mark removed', icon: PackageX, allowed: canExpiryAct },
-    { action: 'RETURN', label: 'Mark returned', icon: Undo2, allowed: canExpiryAct },
-    { action: 'QUARANTINE', label: 'Quarantine', icon: ShieldAlert, allowed: canQuarantineAct },
+  const actions: { action: ExpiryAction; label: string; icon: LucideIcon }[] = [
+    { action: 'REMOVE', label: 'Mark removed', icon: PackageX },
+    { action: 'RETURN', label: 'Mark returned', icon: Undo2 },
+    { action: 'QUARANTINE', label: 'Quarantine', icon: ShieldAlert },
   ];
 
   function openFor(action: ExpiryAction) {
@@ -84,12 +76,10 @@ export function BulkActionBar({
           {selectedCount} batch{selectedCount === 1 ? '' : 'es'} selected
         </p>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {actions.map(({ action, label, icon: Icon, allowed }) => (
+          {actions.map(({ action, label, icon: Icon }) => (
             <button
               key={action}
               type="button"
-              disabled={!allowed}
-              title={allowed ? undefined : 'You do not have permission for this action'}
               onClick={() => openFor(action)}
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
             >

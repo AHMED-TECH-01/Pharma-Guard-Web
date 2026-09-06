@@ -15,7 +15,8 @@ import { SalesTable } from '@/components/sales/sales-table';
 /**
  * Sales history (PRD §10.10, ui-registry §10 /sales). Page position is
  * URL-driven (TRD §17); reversal reuses ConfirmSaleDialog in `reverse`
- * mode and is only offered to holders of sales.reverse (OWNER/MANAGER).
+ * mode and is available to every authenticated member (the API audits
+ * reversals and remains the authorization authority).
  */
 
 export function SalesPage() {
@@ -51,9 +52,6 @@ export function SalesPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('sales.read') ?? false;
-  const canCreate = session?.permissions.includes('sales.create') ?? false;
-  const canReverse = session?.permissions.includes('sales.reverse') ?? false;
 
   const loadSales = useCallback(
     (targetPage: number, signal?: AbortSignal) => {
@@ -78,11 +76,11 @@ export function SalesPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadSales(page, controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, page, loadSales]);
+  }, [checked, pharmacyId, page, loadSales]);
 
   function patchPage(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -147,24 +145,6 @@ export function SalesPage() {
         />
       );
     }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to sales history"
-          description="Recording sales is allowed for your role, but viewing history needs the sales.read permission."
-          action={
-            canCreate ? (
-              <Link
-                href="/sales/new"
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
-              >
-                Record a sale
-              </Link>
-            ) : null
-          }
-        />
-      );
-    }
     if (loadError) {
       return (
         <ErrorState
@@ -180,14 +160,12 @@ export function SalesPage() {
           title="No sales recorded yet"
           description="Recorded sales appear here with stock movements and reversals."
           action={
-            canCreate ? (
-              <Link
-                href="/sales/new"
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
-              >
-                Record a sale
-              </Link>
-            ) : null
+            <Link
+              href="/sales/new"
+              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
+            >
+              Record a sale
+            </Link>
           }
         />
       );
@@ -199,7 +177,7 @@ export function SalesPage() {
             {actionError}
           </div>
         ) : null}
-        <SalesTable sales={data.sales} canReverse={canReverse} busyId={reversePending ? reverseTarget?.id ?? null : null} onReverse={setReverseTarget} />
+        <SalesTable sales={data.sales} busyId={reversePending ? reverseTarget?.id ?? null : null} onReverse={setReverseTarget} />
         <Pagination
           page={data.page}
           totalPages={Math.max(1, Math.ceil(data.total / data.pageSize))}

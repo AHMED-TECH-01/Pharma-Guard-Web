@@ -5,7 +5,6 @@ import { formatDate } from '@/lib/format';
 
 interface ReturnTableProps {
   returns: ReturnListItem[];
-  canWrite: boolean;
   busyId: string | null;
   onAction: (returnItem: ReturnListItem, action: 'approve' | 'complete' | 'reject') => void;
 }
@@ -32,9 +31,9 @@ const REASON_LABELS: Record<ReturnListItem['reason'], string> = {
  * Returns register table (PRD §10.14, reference RETURNS MANAGEMENT screen):
  * Medicine | Batch No. | Quantity | Reason | Supplier | Return Date | Status.
  * Workflow actions keep their column: PENDING -> approve (stock leaves) or
- * reject; APPROVED -> complete. Writes need returns.write.
+ * reject; APPROVED -> complete. The API authorizes and audits every action.
  */
-export function ReturnTable({ returns, canWrite, busyId, onAction }: ReturnTableProps) {
+export function ReturnTable({ returns, busyId, onAction }: ReturnTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="overflow-x-auto">
@@ -48,7 +47,7 @@ export function ReturnTable({ returns, canWrite, busyId, onAction }: ReturnTable
               <th className={HEAD_CELL}>Supplier</th>
               <th className={HEAD_CELL}>Return Date</th>
               <th className={HEAD_CELL}>Status</th>
-              {canWrite ? <th className={HEAD_CELL}><span className="sr-only">Actions</span></th> : null}
+              <th className={HEAD_CELL}><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -72,42 +71,40 @@ export function ReturnTable({ returns, canWrite, busyId, onAction }: ReturnTable
                     {returnItem.status.charAt(0) + returnItem.status.slice(1).toLowerCase()}
                   </span>
                 </td>
-                {canWrite ? (
-                  <td className={`${BODY_CELL} text-right`}>
-                    <div className="flex justify-end gap-1.5">
-                      {returnItem.status === 'PENDING' ? (
-                        <>
-                          <button
-                            type="button"
-                            className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-primary transition hover:bg-subtle disabled:opacity-60"
-                            onClick={() => onAction(returnItem, 'approve')}
-                            disabled={busyId !== null}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-lg border border-status-critical-fg/40 px-2.5 py-1.5 text-xs font-medium text-status-critical-fg transition hover:bg-status-critical-bg disabled:opacity-60"
-                            onClick={() => onAction(returnItem, 'reject')}
-                            disabled={busyId !== null}
-                          >
-                            Reject
-                          </button>
-                        </>
-                      ) : null}
-                      {returnItem.status === 'APPROVED' ? (
+                <td className={`${BODY_CELL} text-right`}>
+                  <div className="flex justify-end gap-1.5">
+                    {returnItem.status === 'PENDING' ? (
+                      <>
                         <button
                           type="button"
                           className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-primary transition hover:bg-subtle disabled:opacity-60"
-                          onClick={() => onAction(returnItem, 'complete')}
+                          onClick={() => onAction(returnItem, 'approve')}
                           disabled={busyId !== null}
                         >
-                          Mark completed
+                          Approve
                         </button>
-                      ) : null}
-                    </div>
-                  </td>
-                ) : null}
+                        <button
+                          type="button"
+                          className="rounded-lg border border-status-critical-fg/40 px-2.5 py-1.5 text-xs font-medium text-status-critical-fg transition hover:bg-status-critical-bg disabled:opacity-60"
+                          onClick={() => onAction(returnItem, 'reject')}
+                          disabled={busyId !== null}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    ) : null}
+                    {returnItem.status === 'APPROVED' ? (
+                      <button
+                        type="button"
+                        className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-primary transition hover:bg-subtle disabled:opacity-60"
+                        onClick={() => onAction(returnItem, 'complete')}
+                        disabled={busyId !== null}
+                      >
+                        Mark completed
+                      </button>
+                    ) : null}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

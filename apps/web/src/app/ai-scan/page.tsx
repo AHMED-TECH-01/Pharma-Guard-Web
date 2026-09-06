@@ -279,15 +279,6 @@ export default function AiScanPage() {
       );
     }
 
-    if (!session.permissions.includes('ocr.use')) {
-      return (
-        <EmptyState
-          title="AI Scan unavailable"
-          description="Your role does not include AI Scan access. Ask a manager or owner for help."
-        />
-      );
-    }
-
     if (view === 'processing') {
       return <OCRProcessingState />;
     }

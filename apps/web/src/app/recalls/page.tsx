@@ -17,9 +17,8 @@ import { RecallFormModal } from '@/components/safety/recall-form-modal';
 
 /**
  * Recall Center (PRD §10.16, ui-registry §10 /recalls). Register recalls,
- * track their lifecycle, inspect affected stock, and quarantine it. Owners
- * and managers write recalls (recalls.write); quarantine actions need
- * quarantine.act.
+ * track their lifecycle, inspect affected stock, and quarantine it. Every
+ * authenticated member can read and act; the API authorizes and audits.
  */
 
 type RecallStatusFilter = 'ALL' | RecallStatus;
@@ -67,9 +66,6 @@ export default function RecallsPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('recalls.read') ?? false;
-  const canWrite = session?.permissions.includes('recalls.write') ?? false;
-  const canQuarantine = session?.permissions.includes('quarantine.act') ?? false;
 
   const loadList = useCallback(
     (signal?: AbortSignal) => {
@@ -92,11 +88,11 @@ export default function RecallsPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadList(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadList]);
+  }, [checked, pharmacyId, loadList]);
 
   async function openDetail(id: string) {
     if (!pharmacyId) return;
@@ -162,14 +158,6 @@ export default function RecallsPage() {
         />
       );
     }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="Recall Center is restricted"
-          description="Recall records are visible to owners, managers, and pharmacists."
-        />
-      );
-    }
     if (loadError && !data) {
       return (
         <ErrorState
@@ -195,7 +183,7 @@ export default function RecallsPage() {
               : 'Try a different status.'
           }
           action={
-            statusFilter === 'ALL' && canWrite ? (
+            statusFilter === 'ALL' ? (
               <button
                 type="button"
                 onClick={() => setFormOpen(true)}
@@ -215,8 +203,6 @@ export default function RecallsPage() {
           <RecallCard
             key={recall.id}
             recall={recall}
-            canWrite={canWrite}
-            canQuarantine={canQuarantine}
             onOpen={() => {
               openDetail(recall.id).catch(() => {
                 setLoadError('Unable to open the recall detail.');
@@ -253,15 +239,13 @@ export default function RecallsPage() {
               {data ? `${data.total} recall${data.total === 1 ? '' : 's'}` : 'Loading…'}
             </p>
           </div>
-          {canWrite ? (
-            <button
-              type="button"
-              onClick={() => setFormOpen(true)}
-              className="inline-flex h-9 items-center rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
-            >
-              Register recall
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => setFormOpen(true)}
+            className="inline-flex h-9 items-center rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
+          >
+            Register recall
+          </button>
         </header>
 
         {notice ? (
@@ -281,7 +265,7 @@ export default function RecallsPage() {
           </div>
         ) : null}
 
-        {checked && session && activePharmacy && canRead ? (
+        {checked && session && activePharmacy ? (
           <select
             value={statusFilter}
             onChange={(event) => {
@@ -317,8 +301,6 @@ export default function RecallsPage() {
 
       <RecallDialog
         recall={detail}
-        canWrite={canWrite}
-        canQuarantine={canQuarantine}
         onClose={() => setDetail(null)}
         onUpdateStatus={(status) => {
           if (!detail) return Promise.resolve();

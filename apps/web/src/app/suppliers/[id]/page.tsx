@@ -47,8 +47,6 @@ export default function SupplierDetailPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('suppliers.read') ?? false;
-  const canWrite = session?.permissions.includes('suppliers.write') ?? false;
 
   const loadSupplier = useCallback(
     (signal?: AbortSignal) => {
@@ -70,11 +68,11 @@ export default function SupplierDetailPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadSupplier(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadSupplier]);
+  }, [checked, pharmacyId, loadSupplier]);
 
   async function handleLogout() {
     setLogoutPending(true);
@@ -130,14 +128,6 @@ export default function SupplierDetailPage() {
         />
       );
     }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to suppliers"
-          description="Ask the pharmacy owner for the suppliers.read permission."
-        />
-      );
-    }
     if (loadError) {
       return (
         <ErrorState
@@ -176,15 +166,13 @@ export default function SupplierDetailPage() {
                 </span>
               ) : null}
             </div>
-            {canWrite ? (
-              <button
-                type="button"
-                className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-text-primary transition hover:bg-subtle"
-                onClick={() => setEditOpen(true)}
-              >
-                Edit supplier
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-text-primary transition hover:bg-subtle"
+              onClick={() => setEditOpen(true)}
+            >
+              Edit supplier
+            </button>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-4 border-t border-subtle pt-4 sm:grid-cols-3">

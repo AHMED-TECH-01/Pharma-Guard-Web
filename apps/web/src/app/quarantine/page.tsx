@@ -64,7 +64,6 @@ export default function QuarantinePage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canAct = session?.permissions.includes('quarantine.act') ?? false;
 
   const loadList = useCallback(
     (signal?: AbortSignal) => {
@@ -199,7 +198,6 @@ export default function QuarantinePage() {
           <div className="space-y-3">
             <QuarantineTable
               items={data.items}
-              canAct={canAct}
               onResolve={(item) => setResolvingItem(item)}
             />
             <p className="text-xs text-text-muted">

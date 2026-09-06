@@ -76,8 +76,6 @@ export function ExpiryPageContent() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canExpiryAct = session?.permissions.includes('expiry.act') ?? false;
-  const canQuarantineAct = session?.permissions.includes('quarantine.act') ?? false;
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -299,7 +297,6 @@ export function ExpiryPageContent() {
         <ExpiryTable
           batches={data.batches}
           selected={selection}
-          canAct={canExpiryAct || canQuarantineAct}
           onToggle={(batchId) =>
             setSelection((current) =>
               current.includes(batchId)
@@ -343,8 +340,6 @@ export function ExpiryPageContent() {
       {activePharmacy ? (
         <BulkActionBar
           selectedCount={selection.length}
-          canExpiryAct={canExpiryAct}
-          canQuarantineAct={canQuarantineAct}
           onRun={handleBulkRun}
         />
       ) : null}

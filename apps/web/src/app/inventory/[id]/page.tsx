@@ -57,7 +57,8 @@ export default function MedicineDetailPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canWrite = session?.permissions.includes('inventory.write') ?? false;
+  // Archive/delete is a destructive, hard-to-reverse action, so it stays
+  // restricted to OWNER/MANAGER (matches the RLS delete policy).
   const canDelete = activePharmacy?.role === 'OWNER' || activePharmacy?.role === 'MANAGER';
 
   const loadDetail = useCallback(
@@ -195,7 +196,6 @@ export default function MedicineDetailPage() {
           reorderLevel={detail.medicine.reorderLevel}
           isArchived={detail.medicine.isArchived}
           stock={detail.stock}
-          canWrite={canWrite}
           canDelete={canDelete}
           onEdit={() => setEditOpen(true)}
           onArchive={() => setArchiveOpen(true)}
@@ -207,24 +207,21 @@ export default function MedicineDetailPage() {
           <h2 className="text-sm font-semibold text-text-primary">
             Batches <span className="font-normal text-text-muted">(first-expiry-first-out)</span>
           </h2>
-          {canWrite ? (
-            <button
-              type="button"
-              onClick={() => {
-                setEditingBatch(null);
-                setBatchModalOpen(true);
-              }}
-              className="inline-flex h-8 items-center rounded-md bg-primary-600 px-3 text-xs font-medium text-white transition hover:bg-primary-700"
-            >
-              Add batch
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              setEditingBatch(null);
+              setBatchModalOpen(true);
+            }}
+            className="inline-flex h-8 items-center rounded-md bg-primary-600 px-3 text-xs font-medium text-white transition hover:bg-primary-700"
+          >
+            Add batch
+          </button>
         </div>
 
         {detail.batches.length > 0 ? (
           <BatchTable
             batches={detail.batches}
-            canWrite={canWrite}
             onAdjust={(batch) => setAdjustBatch(batch)}
           />
         ) : (
@@ -232,18 +229,16 @@ export default function MedicineDetailPage() {
             title="No batches yet"
             description="Add a batch to bring this medicine into stock."
             action={
-              canWrite ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingBatch(null);
-                    setBatchModalOpen(true);
-                  }}
-                  className="inline-flex h-9 items-center rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
-                >
-                  Add batch
-                </button>
-              ) : null
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingBatch(null);
+                  setBatchModalOpen(true);
+                }}
+                className="inline-flex h-9 items-center rounded-md bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700"
+              >
+                Add batch
+              </button>
             }
           />
         )}

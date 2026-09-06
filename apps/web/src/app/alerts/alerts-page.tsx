@@ -90,7 +90,6 @@ export function AlertsPageContent() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canAct = session?.permissions.includes('alerts.act') ?? false;
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -234,7 +233,6 @@ export function AlertsPageContent() {
           <AlertCard
             key={alert.id}
             alert={alert}
-            canAct={canAct}
             onRead={handleRead}
             onResolve={handleResolve}
             onSnooze={handleSnooze}

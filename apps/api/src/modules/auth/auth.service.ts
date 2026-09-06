@@ -3,6 +3,7 @@ import { getEnv } from '../../config/env.js';
 import { getSupabaseAdmin, getSupabaseAuth } from '../../database/supabase.js';
 import { ApiError } from '../../utils/api-error.js';
 import { logger } from '../../utils/logger.js';
+import { writeAudit } from '../../utils/audit.js';
 import type { MembershipSummary } from '../../types/request.js';
 
 /**
@@ -238,6 +239,41 @@ export async function loadUserContext(
       status: record.status,
     };
   });
+
+  // Invite acceptance (auth flow): there is no separate acceptance endpoint,
+  // so holding a valid session - the user just proved control of the invited
+  // email address - activates pending memberships. Without this, invited
+  // members stay stuck with "No active pharmacy membership" forever. The
+  // service-role update is scoped to this user's own rows; suspended members
+  // are never touched.
+  const hasPendingInvite = memberships.some((membership) => membership.status === 'invited');
+  if (hasPendingInvite) {
+    const { error: activationError } = await supabase
+      .from('pharmacy_memberships')
+      .update({ status: 'active' })
+      .eq('user_id', userId)
+      .eq('status', 'invited');
+    if (activationError) {
+      logger.error('membership_activation_failed', {
+        code: activationError.code,
+        message: activationError.message,
+      });
+    } else {
+      for (const membership of memberships) {
+        if (membership.status === 'invited') {
+          membership.status = 'active';
+          void writeAudit({
+            pharmacyId: membership.pharmacyId,
+            userId,
+            action: 'member.activated',
+            entityType: 'member',
+            entityId: userId,
+            after: { role: membership.role, status: 'active' },
+          }).catch(() => undefined);
+        }
+      }
+    }
+  }
 
   return {
     userId: profile.id,

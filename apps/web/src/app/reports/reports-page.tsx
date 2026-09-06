@@ -65,7 +65,6 @@ export function ReportsPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('reports.read') ?? false;
 
   const loadPreview = useCallback(
     (signal?: AbortSignal) => {
@@ -92,11 +91,11 @@ export function ReportsPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadPreview(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadPreview]);
+  }, [checked, pharmacyId, loadPreview]);
 
   async function handleLogout() {
     setLogoutPending(true);
@@ -154,15 +153,6 @@ export function ReportsPage() {
         />
       );
     }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to reports"
-          description="Reports are available to the pharmacy owner and managers."
-        />
-      );
-    }
-
     const truncated = preview !== null && preview.totalRows > preview.rows.length;
 
     return (

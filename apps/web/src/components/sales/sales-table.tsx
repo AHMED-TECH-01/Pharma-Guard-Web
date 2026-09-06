@@ -5,7 +5,6 @@ import { formatPKR, formatRelativeTime } from '@/lib/format';
 
 interface SalesTableProps {
   sales: SaleListItem[];
-  canReverse: boolean;
   busyId: string | null;
   onReverse: (sale: SaleListItem) => void;
 }
@@ -15,10 +14,10 @@ const BODY_CELL = 'px-4 py-3 align-top text-sm text-text-primary';
 
 /**
  * Sales history table (PRD §10.10). Reversed rows stay visible with a
- * stamp; reversal is offered only for active sales when the viewer holds
- * sales.reverse (OWNER/MANAGER).
+ * stamp; reversal is offered for active sales - the API authorizes and
+ * audits every reversal.
  */
-export function SalesTable({ sales, canReverse, busyId, onReverse }: SalesTableProps) {
+export function SalesTable({ sales, busyId, onReverse }: SalesTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="overflow-x-auto">
@@ -33,7 +32,7 @@ export function SalesTable({ sales, canReverse, busyId, onReverse }: SalesTableP
               <th className={HEAD_CELL}>Total</th>
               <th className={HEAD_CELL}>Note</th>
               <th className={HEAD_CELL}>Status</th>
-              {canReverse ? <th className={HEAD_CELL}><span className="sr-only">Actions</span></th> : null}
+              <th className={HEAD_CELL}><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -72,20 +71,18 @@ export function SalesTable({ sales, canReverse, busyId, onReverse }: SalesTableP
                       </span>
                     )}
                   </td>
-                  {canReverse ? (
-                    <td className={`${BODY_CELL} text-right`}>
-                      {reversed ? null : (
-                        <button
-                          type="button"
-                          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-primary transition hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-60"
-                          onClick={() => onReverse(sale)}
-                          disabled={busyId !== null}
-                        >
-                          {busyId === sale.id ? 'Reversing…' : 'Reverse'}
-                        </button>
-                      )}
-                    </td>
-                  ) : null}
+                  <td className={`${BODY_CELL} text-right`}>
+                    {reversed ? null : (
+                      <button
+                        type="button"
+                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-primary transition hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => onReverse(sale)}
+                        disabled={busyId !== null}
+                      >
+                        {busyId === sale.id ? 'Reversing…' : 'Reverse'}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}

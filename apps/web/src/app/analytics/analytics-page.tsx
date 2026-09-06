@@ -24,7 +24,7 @@ import { formatPKR } from '@/lib/format';
  * Analytics (build-plan Phase 10, PRD §10.17, ui-registry §10 /analytics):
  * sales trends and fast movers, slow/dead/overstock lists, inventory
  * valuation, expiry exposure, reorder trends and the transparent health
- * score. OWNER/MANAGER only (analytics.read enforced server-side too).
+ * score. Available to every authenticated member (enforced server-side).
  */
 
 const WINDOW_OPTIONS = [7, 30, 90];
@@ -114,7 +114,6 @@ export function AnalyticsPage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('analytics.read') ?? false;
 
   const loadStatic = useCallback(
     (signal?: AbortSignal) => {
@@ -160,18 +159,18 @@ export function AnalyticsPage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadStatic(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadStatic]);
+  }, [checked, pharmacyId, loadStatic]);
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadSales(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadSales]);
+  }, [checked, pharmacyId, loadSales]);
 
   async function handleLogout() {
     setLogoutPending(true);
@@ -229,14 +228,6 @@ export function AnalyticsPage() {
         <EmptyState
           title="No pharmacy selected"
           description="Create or select a pharmacy before viewing analytics."
-        />
-      );
-    }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to analytics"
-          description="Analytics is available to the pharmacy owner and managers."
         />
       );
     }

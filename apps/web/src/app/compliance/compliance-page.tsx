@@ -47,7 +47,6 @@ export function CompliancePage() {
 
   const activePharmacy = session?.activePharmacy ?? null;
   const pharmacyId = activePharmacy?.pharmacyId ?? null;
-  const canRead = session?.permissions.includes('audit.read') ?? false;
 
   const loadSummary = useCallback(
     (signal?: AbortSignal) => {
@@ -74,11 +73,11 @@ export function CompliancePage() {
   );
 
   useEffect(() => {
-    if (!checked || !pharmacyId || !canRead) return;
+    if (!checked || !pharmacyId) return;
     const controller = new AbortController();
     loadSummary(controller.signal);
     return () => controller.abort();
-  }, [checked, pharmacyId, canRead, loadSummary]);
+  }, [checked, pharmacyId, loadSummary]);
 
   async function handleLogout() {
     setLogoutPending(true);
@@ -106,14 +105,6 @@ export function CompliancePage() {
         <EmptyState
           title="No pharmacy selected"
           description="Create or select a pharmacy before viewing compliance records."
-        />
-      );
-    }
-    if (!canRead) {
-      return (
-        <EmptyState
-          title="No access to compliance records"
-          description="Compliance data is available to the pharmacy owner and managers."
         />
       );
     }

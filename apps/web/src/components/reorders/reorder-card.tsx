@@ -5,7 +5,6 @@ import { formatDate } from '@/lib/format';
 
 interface ReorderCardProps {
   recommendation: ReorderRecommendation;
-  canWrite: boolean;
   busy: boolean;
   onRecord: (recommendation: ReorderRecommendation) => void;
 }
@@ -13,9 +12,10 @@ interface ReorderCardProps {
 /**
  * Reorder recommendation card (registry §3, PRD §10.12): current stock,
  * daily sales, stockout estimate, recommended quantity, and the plain-
- * language explanation required by the TRD §11 contract.
+ * language explanation required by the TRD §11 contract. Every action
+ * is authorized and audited by the API.
  */
-export function ReorderCard({ recommendation, canWrite, busy, onRecord }: ReorderCardProps) {
+export function ReorderCard({ recommendation, busy, onRecord }: ReorderCardProps) {
   const urgent = !recommendation.sufficientHistory || recommendation.currentStock === 0;
 
   return (
@@ -76,7 +76,7 @@ export function ReorderCard({ recommendation, canWrite, busy, onRecord }: Reorde
 
       <p className="mt-3 text-xs text-text-muted">{recommendation.explanation}</p>
 
-      {canWrite && recommendation.sufficientHistory ? (
+      {recommendation.sufficientHistory ? (
         <div className="mt-4 flex justify-end">
           <button
             type="button"
