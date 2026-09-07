@@ -276,7 +276,7 @@ export function AppShell({
             type="button"
             aria-label="Open navigation"
             onClick={() => setMobileNavOpen(true)}
-            className="rounded-md p-2 transition hover:bg-surface-muted"
+            className="rounded-md p-2 transition hover:bg-surface-muted lg:hidden"
           >
             <Menu className="size-5" aria-hidden />
           </button>
