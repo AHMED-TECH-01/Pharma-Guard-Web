@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { z } from 'zod';
 import { getEnv } from '../../config/env.js';
+import { logger } from '../../utils/logger.js';
 import { ApiError } from '../../utils/api-error.js';
 import { OCR_FIELD_KEYS, type OcrExtraction, type OcrFieldKey } from '@pharmaguard/types';
 
@@ -14,7 +15,45 @@ import { OCR_FIELD_KEYS, type OcrExtraction, type OcrFieldKey } from '@pharmagua
  *   stored or shown to the user (pipeline step: "Validation / Normalization").
  */
 
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+/**
+ * Default vision model. gemini-2.5-flash stopped accepting new generateContent
+ * callers (404 "no longer available to new users"); gemini-3.6-flash is the
+ * supported replacement (verified against the live model catalog).
+ * GEMINI_MODEL can still override it (apps/api/.env).
+ */
+export const DEFAULT_MODEL = 'gemini-3.6-flash';
+
+/** Single user-facing message for any Gemini failure (task rule: calm, actionable). */
+export const OCR_UNAVAILABLE_MESSAGE =
+  'AI scanning is temporarily unavailable. Please try again or enter the medicine manually.';
+
+/**
+ * Safe retry for TRANSIENT model/API problems only (429/500/503, UNAVAILABLE,
+ * RESOURCE_EXHAUSTED). Never switches models and never retries permanent
+ * errors (400/403/404) - those fail fast so the user can retry or fall back
+ * to manual entry.
+ */
+const TRANSIENT_CODES = new Set([429, 500, 503]);
+const MAX_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 1200;
+
+function isTransientFailure(cause: unknown): boolean {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  try {
+    const parsed = JSON.parse(message) as { error?: { code?: number; status?: string } };
+    if (parsed.error?.code !== undefined && TRANSIENT_CODES.has(parsed.error.code)) return true;
+    if (parsed.error?.status === 'UNAVAILABLE' || parsed.error?.status === 'RESOURCE_EXHAUSTED') {
+      return true;
+    }
+  } catch {
+    // Not a JSON body - fall through to the code-pattern check.
+  }
+  return /\b(429|500|503)\b/.test(message);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const EXTRACTION_PROMPT = `You are a pharmacy assistant extracting medicine details from a photo of a medicine package (box, strip, or bottle).
 
@@ -31,6 +70,7 @@ Read the image and return JSON with the following fields:
 
 Rules:
 - Use null for any field that is not visible or not legible. NEVER guess or invent a value.
+- If text is blurry, partially covered, or you cannot read every character clearly, return null for that field - NEVER reconstruct or infer a value (a date, a batch number) from partial visibility.
 - Dates must be real calendar dates; if only month/year is printed, use the last day of that month.
 - Do not add any text outside the JSON object.`;
 
@@ -139,25 +179,46 @@ export async function extractMedicine(
 
   let response;
   try {
-    response = await getClient().models.generateContent({
-      model,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: EXTRACTION_PROMPT },
-            { inlineData: { mimeType: image.mimeType, data: image.data.toString('base64') } },
+    // Bounded same-model retry for transient failures only (see
+    // isTransientFailure); permanent errors rethrow immediately.
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        response = await getClient().models.generateContent({
+          model,
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: EXTRACTION_PROMPT },
+                { inlineData: { mimeType: image.mimeType, data: image.data.toString('base64') } },
+              ],
+            },
           ],
-        },
-      ],
-      config: {
-        temperature: 0,
-        responseMimeType: 'application/json',
-        responseSchema: RESPONSE_SCHEMA,
-      },
-    });
+          config: {
+            temperature: 0,
+            responseMimeType: 'application/json',
+            responseSchema: RESPONSE_SCHEMA,
+          },
+        });
+        break;
+      } catch (cause) {
+        if (attempt >= MAX_ATTEMPTS || !isTransientFailure(cause)) throw cause;
+        logger.warn('gemini_retry', {
+          model,
+          attempt,
+          nextDelayMs: RETRY_BASE_DELAY_MS * attempt,
+        });
+        await delay(RETRY_BASE_DELAY_MS * attempt);
+      }
+    }
   } catch (cause) {
-    throw ApiError.ocrFailed(`Vision model request failed: ${(cause as Error).message}`);
+    // Raw provider details (status, Google error text) stay server-side only;
+    // the client receives the calm actionable message without any of them.
+    logger.error('gemini_request_failed', {
+      model,
+      message: cause instanceof Error ? cause.message : String(cause),
+    });
+    throw ApiError.ocrFailed(OCR_UNAVAILABLE_MESSAGE);
   }
 
   const text = response.text ?? '';
@@ -165,12 +226,14 @@ export async function extractMedicine(
   try {
     rawJson = JSON.parse(text);
   } catch {
-    throw ApiError.ocrFailed('Vision model returned unparseable output');
+    logger.warn('gemini_unparseable_output', { model, length: text.length });
+    throw ApiError.ocrFailed(OCR_UNAVAILABLE_MESSAGE);
   }
 
   try {
     return normalizeExtraction(rawJson);
   } catch {
-    throw ApiError.ocrFailed('Vision model output did not match the expected shape');
+    logger.warn('gemini_invalid_shape', { model });
+    throw ApiError.ocrFailed(OCR_UNAVAILABLE_MESSAGE);
   }
 }

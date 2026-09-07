@@ -158,7 +158,7 @@ export default function AiScanPage() {
       setUploadError(
         error instanceof Error
           ? error.message
-          : 'Scan failed. Try again or add the medicine manually.',
+          : 'AI scanning is temporarily unavailable. Please try again or enter the medicine manually.',
       );
       void loadHistory(pharmacyId);
     }
