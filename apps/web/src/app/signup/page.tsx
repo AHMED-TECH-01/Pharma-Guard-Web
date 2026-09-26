@@ -182,13 +182,23 @@ export default function SignupPage() {
               />
               <span>
                 I agree to the{' '}
-                <span title="Will be available in a later phase" className="font-medium text-text underline decoration-border underline-offset-2">
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-text underline decoration-border underline-offset-2 hover:text-primary-700"
+                >
                   Terms &amp; Conditions
-                </span>{' '}
+                </Link>{' '}
                 and{' '}
-                <span title="Will be available in a later phase" className="font-medium text-text underline decoration-border underline-offset-2">
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-text underline decoration-border underline-offset-2 hover:text-primary-700"
+                >
                   Privacy Policy
-                </span>
+                </Link>
               </span>
             </label>
             {fieldErrors.acceptTerms ? (

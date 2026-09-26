@@ -24,6 +24,7 @@ import { SiteHeader } from '@/components/landing/site-header';
 import { SiteFooter } from '@/components/landing/site-footer';
 import { PlanCards } from '@/components/landing/plan-cards';
 import { FaqSection } from '@/components/landing/faq-section';
+import { RecoveryLinkRedirect } from '@/components/landing/recovery-link-redirect';
 
 /**
  * Landing page (PRD §10.1): hero, problem statement, how it works, AI OCR
@@ -423,6 +424,7 @@ function FinalCta() {
 export default function LandingPage() {
   return (
     <div className="min-h-dvh bg-background">
+      <RecoveryLinkRedirect />
       <SiteHeader />
       <main>
         <Hero />

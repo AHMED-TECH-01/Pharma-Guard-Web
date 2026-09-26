@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CircleCheck, Loader2, MailCheck } from 'lucide-react';
-import { createBrowserSupabase } from '@/lib/supabase';
+import { createEphemeralSupabase } from '@/lib/supabase';
 import { api, ApiClientError, type SessionData } from '@/lib/api';
 import { AuthError } from '@/components/auth/auth-error';
 import { AuthLayout } from '@/components/auth/auth-layout';
@@ -99,7 +99,7 @@ function ConfirmEmailForm() {
       setErrorKind(null);
       setNetworkError(null);
       try {
-        const supabase = createBrowserSupabase();
+        const supabase = createEphemeralSupabase();
         const { data, error } = await supabase.auth.verifyOtp({
           type: 'signup',
           // snake_case on purpose: VerifyTokenHashParams mirrors GoTrue's wire field

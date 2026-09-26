@@ -1,8 +1,9 @@
 import type { AuthUserContext } from '@pharmaguard/types';
 import { getEnv } from '../../config/env.js';
-import { getSupabaseAdmin, getSupabaseAuth } from '../../database/supabase.js';
+import { getSupabaseAdmin, getSupabaseAuth, getSupabaseRecovery } from '../../database/supabase.js';
 import { ApiError } from '../../utils/api-error.js';
 import { logger } from '../../utils/logger.js';
+import { withTransientRetry } from '../../utils/postgrest-retry.js';
 import { writeAudit } from '../../utils/audit.js';
 import type { MembershipSummary } from '../../types/request.js';
 
@@ -124,10 +125,15 @@ export async function revokeSession(refreshToken: string): Promise<void> {
  * Completion happens via the Supabase recovery link; the frontend (approved
  * auth operation, architecture.md §3) exchanges the code and updates the
  * password through Supabase Auth directly.
+ *
+ * Uses the implicit-flow client on purpose: a PKCE recovery email binds its
+ * verifier to this server process, which the user's browser can never
+ * present during the exchange. Implicit links carry the recovery tokens in
+ * the URL fragment, which /reset-password consumes in the same browser.
  */
 export async function sendPasswordResetEmail(email: string): Promise<{ sent: true }> {
   const { FRONTEND_URL } = getEnv();
-  const { error } = await getSupabaseAuth().auth.resetPasswordForEmail(email, {
+  const { error } = await getSupabaseRecovery().auth.resetPasswordForEmail(email, {
     redirectTo: `${FRONTEND_URL}/reset-password`,
   });
   if (error) {
@@ -190,13 +196,19 @@ export async function loadUserContext(
 ): Promise<AuthUserContext> {
   const supabase = getSupabaseAdmin();
 
+  // Both lookups retry transient Supabase edge faults (PGRST303 stale time
+  // cache) - an intermittent window here used to 502 the confirm/login flow.
   const [{ data: profile, error: profileError }, { data: membershipRows, error: membershipError }] =
     await Promise.all([
-      supabase.from('profiles').select('id, full_name, phone').eq('id', userId).single(),
-      supabase
-        .from('pharmacy_memberships')
-        .select('pharmacy_id, role, status, pharmacies(name)')
-        .eq('user_id', userId),
+      withTransientRetry(() =>
+        supabase.from('profiles').select('id, full_name, phone').eq('id', userId).single(),
+      ),
+      withTransientRetry(() =>
+        supabase
+          .from('pharmacy_memberships')
+          .select('pharmacy_id, role, status, pharmacies(name)')
+          .eq('user_id', userId),
+      ),
     ]);
 
   if (profileError) {

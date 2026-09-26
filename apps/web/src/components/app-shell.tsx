@@ -9,6 +9,7 @@ import {
   Bell,
   CalendarClock,
   ClipboardList,
+  ClipboardCheck,
   FileCheck2,
   LayoutDashboard,
   LifeBuoy,
@@ -59,6 +60,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Quarantine', icon: ShieldAlert, href: '/quarantine' },
   { label: 'Recalls', icon: PackageX, href: '/recalls' },
   { label: 'Analytics', icon: BarChart3, href: '/analytics' },
+  { label: 'Reports', icon: ClipboardCheck, href: '/reports' },
   { label: 'Alerts', icon: Bell, href: '/alerts' },
   { label: 'Compliance', icon: FileCheck2, href: '/compliance' },
   { label: 'Users', icon: Users, href: '/users' },
@@ -214,6 +216,18 @@ export function AppShell({
     </a>
   );
 
+  const legalLinks = (
+    <div className="flex items-center gap-3 px-5 pb-3 text-xs text-white/50">
+      <Link href="/terms" className="py-1.5 transition hover:text-white/80">
+        Terms &amp; Conditions
+      </Link>
+      <span aria-hidden>&middot;</span>
+      <Link href="/privacy" className="py-1.5 transition hover:text-white/80">
+        Privacy Policy
+      </Link>
+    </div>
+  );
+
   const brand = (
     <div className="flex items-center gap-2.5 px-5 py-5">
       <BrandMark variant="solid" className="size-7" />
@@ -235,6 +249,7 @@ export function AppShell({
           {navList()}
         </nav>
         {supportLink}
+        {legalLinks}
       </aside>
 
       {mobileNavOpen ? (
@@ -257,7 +272,7 @@ export function AppShell({
                 type="button"
                 aria-label="Close navigation"
                 onClick={() => setMobileNavOpen(false)}
-                className="rounded-md p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
+                className="rounded-md p-2.5 text-white/70 transition hover:bg-white/10 hover:text-white"
               >
                 <X className="size-5" aria-hidden />
               </button>
@@ -266,17 +281,18 @@ export function AppShell({
               {navList(() => setMobileNavOpen(false))}
             </nav>
             {supportLink}
+            {legalLinks}
           </div>
         </div>
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
           <button
             type="button"
             aria-label="Open navigation"
             onClick={() => setMobileNavOpen(true)}
-            className="rounded-md p-2 transition hover:bg-surface-muted lg:hidden"
+            className="rounded-md p-2.5 transition hover:bg-surface-muted lg:hidden"
           >
             <Menu className="size-5" aria-hidden />
           </button>
@@ -305,7 +321,7 @@ export function AppShell({
                   ? `${unreadAlertsCount} new alerts`
                   : 'No new alerts'
               }
-              className="relative rounded-md p-2 transition hover:bg-surface-muted"
+              className="relative rounded-md p-2.5 transition hover:bg-surface-muted"
             >
               <Bell className="size-5" aria-hidden />
               {unreadAlertsCount > 0 ? (

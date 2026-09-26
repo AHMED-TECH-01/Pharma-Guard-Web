@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { KeyRound } from 'lucide-react';
 import {
@@ -23,6 +23,12 @@ import { PasswordStrength } from '@/components/auth/password-strength';
  * (architecture.md §3) because it is cryptographically bound to this
  * browser. Tokens are stripped from the address bar immediately and the
  * recovery session is discarded right after the password update.
+ *
+ * Every step uses the SAME createBrowserSupabase() singleton: the session
+ * it resolves must be visible to the submit handler, and a fresh client
+ * would fail with GoTrue's "Auth session missing!". If the URL carries no
+ * credentials (page refresh after a resolved exchange), an already-present
+ * recovery session is accepted instead.
  */
 
 type Phase = 'resolving' | 'ready' | 'invalid' | 'done';
@@ -52,7 +58,10 @@ async function resolveRecoveryCredentials(): Promise<{ ok: true } | { ok: false 
       });
       if (error) return { ok: false };
     } else {
-      return { ok: false };
+      // No credentials in the URL: accept a previously resolved recovery
+      // session so a refresh does not invalidate the form.
+      const { data } = await supabase.auth.getUser();
+      return data.user ? { ok: true } : { ok: false };
     }
 
     // Confirm the recovery session actually resolved to a user.
@@ -85,17 +94,16 @@ function ResetPasswordForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
-    resolveRecoveryCredentials().then((result) => {
-      if (!cancelled) {
-        setPhase(result.ok ? 'ready' : 'invalid');
-      }
+    if (startedRef.current) {
+      return; // Strict-mode / double-effect guard: the code is single-use
+    }
+    startedRef.current = true;
+    void resolveRecoveryCredentials().then((result) => {
+      setPhase(result.ok ? 'ready' : 'invalid');
     });
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
