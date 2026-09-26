@@ -3,6 +3,7 @@ import { ACCESS_COOKIE } from '../config/cookies.js';
 import { getSupabaseAdmin } from '../database/supabase.js';
 import { ApiError } from '../utils/api-error.js';
 import { logger } from '../utils/logger.js';
+import { withTransientRetry } from '../utils/postgrest-retry.js';
 import { verifyAccessToken } from './token-verify.js';
 import type { MembershipSummary, RequestAuth } from '../types/request.js';
 
@@ -27,10 +28,13 @@ function extractToken(req: Request): string | null {
 }
 
 async function loadMemberships(userId: string): Promise<MembershipSummary[]> {
-  const { data, error } = await getSupabaseAdmin()
-    .from('pharmacy_memberships')
-    .select('pharmacy_id, role, status, pharmacies(name)')
-    .eq('user_id', userId);
+  // Retries transient Supabase edge faults (PGRST303 stale time cache).
+  const { data, error } = await withTransientRetry(() =>
+    getSupabaseAdmin()
+      .from('pharmacy_memberships')
+      .select('pharmacy_id, role, status, pharmacies(name)')
+      .eq('user_id', userId),
+  );
 
   if (error) {
     throw ApiError.internal('Unable to resolve user memberships');
@@ -74,11 +78,14 @@ export async function requireAuth(
 
     const payload = await verifyAccessToken(token);
 
-    const { data: profile, error: profileError } = await getSupabaseAdmin()
-      .from('profiles')
-      .select('id, full_name, phone')
-      .eq('id', payload.sub)
-      .single();
+    // Retries transient Supabase edge faults (PGRST303 stale time cache).
+    const { data: profile, error: profileError } = await withTransientRetry(() =>
+      getSupabaseAdmin()
+        .from('profiles')
+        .select('id, full_name, phone')
+        .eq('id', payload.sub)
+        .single(),
+    );
 
     if (profileError) {
       // Distinguish a genuinely missing profile (PGRST116: no rows) from an

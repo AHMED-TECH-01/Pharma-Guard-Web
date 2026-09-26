@@ -160,6 +160,20 @@ create policy "reorders_update" on public.reorders for update
 create policy "reorders_delete" on public.reorders for delete
   using (public.has_any_role(pharmacy_id, array['OWNER', 'MANAGER']::text[]));
 
+-- updated_at maintainer. This function previously existed only in the live
+-- project (created out-of-band); defining it here keeps fresh apply-all runs
+-- from failing on the trigger below, and pins search_path per linter 0011.
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
 drop trigger if exists trg_reorders_updated_at on public.reorders;
 create trigger trg_reorders_updated_at
   before update on public.reorders
