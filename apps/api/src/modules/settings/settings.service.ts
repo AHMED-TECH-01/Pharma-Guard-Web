@@ -1,5 +1,8 @@
 import type { NotificationPrefs, PharmacySettings } from '@pharmaguard/types';
+import { REFRESH_COOKIE } from '../../config/cookies.js';
 import { getSupabaseAdmin, getSupabaseAuth } from '../../database/supabase.js';
+import { dbError } from '../../utils/db-error.js';
+import { logger } from '../../utils/logger.js';
 import { ApiError } from '../../utils/api-error.js';
 import { writeAudit } from '../../utils/audit.js';
 
@@ -47,7 +50,7 @@ export async function getPharmacySettings(pharmacyId: string): Promise<PharmacyS
     .eq('id', pharmacyId)
     .maybeSingle();
   if (error) {
-    throw ApiError.internal(`Unable to load pharmacy settings: ${error.message}`);
+    throw dbError('Unable to load pharmacy settings', error);
   }
   if (!data) {
     throw ApiError.notFound('Pharmacy not found.');
@@ -80,7 +83,7 @@ export async function updatePharmacySettings(
     })
     .eq('id', pharmacyId);
   if (error) {
-    throw ApiError.internal(`Unable to update pharmacy settings: ${error.message}`);
+    throw dbError('Unable to update pharmacy settings', error);
   }
 
   await writeAudit({
@@ -112,7 +115,7 @@ export async function updateOwnProfile(
     .eq('id', userId)
     .maybeSingle();
   if (fetchError) {
-    throw ApiError.internal(`Unable to load your profile: ${fetchError.message}`);
+    throw dbError('Unable to load your profile', fetchError);
   }
   const before = currentRow as unknown as { full_name: string | null; phone: string | null } | null;
 
@@ -120,7 +123,7 @@ export async function updateOwnProfile(
     .from('profiles')
     .upsert({ id: userId, full_name: input.fullName, phone }, { onConflict: 'id' });
   if (error) {
-    throw ApiError.internal(`Unable to update your profile: ${error.message}`);
+    throw dbError('Unable to update your profile', error);
   }
 
   if (pharmacyId) {
@@ -165,7 +168,7 @@ export async function getNotificationPrefs(userId: string): Promise<Notification
     .eq('id', userId)
     .maybeSingle();
   if (error) {
-    throw ApiError.internal(`Unable to load notification preferences: ${error.message}`);
+    throw dbError('Unable to load notification preferences', error);
   }
   const row = data as unknown as { notification_prefs: unknown } | null;
   return mergePrefs(row?.notification_prefs);
@@ -181,7 +184,7 @@ export async function updateNotificationPrefs(
     .from('profiles')
     .upsert({ id: userId, notification_prefs: prefs }, { onConflict: 'id' });
   if (error) {
-    throw ApiError.internal(`Unable to save notification preferences: ${error.message}`);
+    throw dbError('Unable to save notification preferences', error);
   }
 
   if (pharmacyId) {
@@ -202,7 +205,9 @@ export async function updateNotificationPrefs(
 /**
  * Password change requires re-authentication: the current password is
  * verified with the publishable client before the admin API applies the
- * new one. The change is audited for the security timeline.
+ * new one. On success every other session for the user is revoked (the
+ * caller's own cookie survives), so a stolen refresh token does not
+ * outlive the change. The change is audited for the security timeline.
  */
 export async function changePassword(
   userId: string,
@@ -223,7 +228,25 @@ export async function changePassword(
     password: input.newPassword,
   });
   if (error) {
-    throw ApiError.externalService(`Could not update the password: ${error.message}`);
+    logger.warn('password_update_failed', { userId, code: error.code ?? null, message: error.message ?? null });
+    throw ApiError.externalService('Could not update the password. Please try again.');
+  }
+
+  // Scope 'others' revokes all other refresh tokens for this user while the
+  // caller's own session (identified by its refresh cookie) stays valid.
+  const refreshToken = request?.cookies?.[REFRESH_COOKIE];
+  if (typeof refreshToken === 'string' && refreshToken.length > 0) {
+    const { error: signOutError } = await getSupabaseAdmin().auth.admin.signOut(
+      refreshToken,
+      'others',
+    );
+    if (signOutError) {
+      logger.warn('session_revoke_after_password_change_failed', {
+        userId,
+        code: signOutError.code ?? null,
+        message: signOutError.message ?? null,
+      });
+    }
   }
 
   if (pharmacyId) {

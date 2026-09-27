@@ -1,5 +1,7 @@
 import type { InviteMemberResult, MemberListItem, MemberListResponse, UserRole } from '@pharmaguard/types';
 import { getSupabaseAdmin } from '../../database/supabase.js';
+import { dbError } from '../../utils/db-error.js';
+import { logger } from '../../utils/logger.js';
 import { ApiError } from '../../utils/api-error.js';
 import { writeAudit } from '../../utils/audit.js';
 
@@ -58,7 +60,7 @@ async function assertNotLastOwner(pharmacyId: string, targetUserId: string): Pro
     .eq('role', 'OWNER')
     .eq('status', 'active');
   if (error) {
-    throw ApiError.internal(`Unable to verify owner count: ${error.message}`);
+    throw dbError('Unable to verify owner count', error);
   }
   const owners = (data ?? []) as unknown as { user_id: string }[];
   if (owners.length === 1 && owners[0]?.user_id === targetUserId) {
@@ -98,7 +100,7 @@ export async function listMembers(pharmacyId: string): Promise<MemberListRespons
 
   if (memberships.error || profiles.error) {
     const firstError = memberships.error ?? profiles.error;
-    throw ApiError.internal(`Unable to load the team roster: ${firstError?.message ?? 'unknown'}`);
+    throw dbError('Unable to load the team roster', firstError);
   }
 
   const profileMap = new Map<string, { full_name: string | null; phone: string | null }>();
@@ -146,7 +148,7 @@ export async function inviteMember(
       .eq('user_id', existing.id)
       .maybeSingle();
     if (membershipError) {
-      throw ApiError.internal(`Unable to verify membership: ${membershipError.message}`);
+      throw dbError('Unable to verify membership', membershipError);
     }
     if (existingMembership) {
       throw ApiError.conflict('This user is already a member of the pharmacy.');
@@ -159,9 +161,8 @@ export async function inviteMember(
       email: input.email,
     });
     if (error || !data.user) {
-      throw ApiError.externalService(
-        `Could not create the invited user: ${error?.message ?? 'unknown auth error'}`,
-      );
+      logger.warn('invite_user_failed', { code: error?.code ?? null, message: error?.message ?? null });
+      throw ApiError.externalService('Could not create the invited user.');
     }
     userId = data.user.id;
     status = 'invited';
@@ -174,7 +175,7 @@ export async function inviteMember(
     .select('user_id, role, status, created_at')
     .single();
   if (insertError) {
-    throw ApiError.internal(`Unable to add the member: ${insertError.message}`);
+    throw dbError('Unable to add the member', insertError);
   }
 
   const emails = await fetchEmails([userId]);
@@ -227,7 +228,7 @@ export async function updateMember(
     .eq('user_id', targetUserId)
     .maybeSingle();
   if (fetchError) {
-    throw ApiError.internal(`Unable to load the member: ${fetchError.message}`);
+    throw dbError('Unable to load the member', fetchError);
   }
   if (!current) {
     throw ApiError.notFound('Member not found in this pharmacy.');
@@ -249,7 +250,7 @@ export async function updateMember(
     .select('user_id, role, status, created_at')
     .single();
   if (updateError) {
-    throw ApiError.internal(`Unable to update the member: ${updateError.message}`);
+    throw dbError('Unable to update the member', updateError);
   }
 
   await writeAudit({
@@ -301,7 +302,7 @@ export async function removeMember(
     .eq('user_id', targetUserId)
     .maybeSingle();
   if (fetchError) {
-    throw ApiError.internal(`Unable to load the member: ${fetchError.message}`);
+    throw dbError('Unable to load the member', fetchError);
   }
   if (!current) {
     throw ApiError.notFound('Member not found in this pharmacy.');
@@ -318,7 +319,7 @@ export async function removeMember(
     .eq('pharmacy_id', pharmacyId)
     .eq('user_id', targetUserId);
   if (deleteError) {
-    throw ApiError.internal(`Unable to remove the member: ${deleteError.message}`);
+    throw dbError('Unable to remove the member', deleteError);
   }
 
   await writeAudit({

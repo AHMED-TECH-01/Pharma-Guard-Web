@@ -13,6 +13,7 @@ import { getPermissionsForRole, PERMISSIONS } from '../../middleware/authorize.j
 import {
   loginLimiter,
   passwordResetLimiter,
+  refreshLimiter,
   sessionExchangeLimiter,
   signupLimiter,
   verificationLimiter,
@@ -153,20 +154,24 @@ authRouter.post(
   },
 );
 
-authRouter.post('/refresh', async (req, res, next) => {
-  try {
-    const refreshToken = req.cookies?.[REFRESH_COOKIE];
-    if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
-      throw ApiError.unauthorized('Session expired. Please sign in again.');
+authRouter.post(
+  '/refresh',
+  refreshLimiter,
+  async (req, res, next) => {
+    try {
+      const refreshToken = req.cookies?.[REFRESH_COOKIE];
+      if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
+        throw ApiError.unauthorized('Session expired. Please sign in again.');
+      }
+      const result = await refreshSession(refreshToken);
+      setAuthCookies(res, result.accessToken, result.refreshToken);
+      ok(res, { authenticated: true });
+    } catch (error) {
+      clearAuthCookies(res);
+      next(error);
     }
-    const result = await refreshSession(refreshToken);
-    setAuthCookies(res, result.accessToken, result.refreshToken);
-    ok(res, { authenticated: true });
-  } catch (error) {
-    clearAuthCookies(res);
-    next(error);
-  }
-});
+  },
+);
 
 authRouter.get('/me', requireAuth, async (req, res, next) => {
   try {

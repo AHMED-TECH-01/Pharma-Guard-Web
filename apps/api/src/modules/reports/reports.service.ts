@@ -617,7 +617,12 @@ export async function getReportPreview(
 /** CSV with Excel-friendly BOM; summary lines append below the table. */
 export function renderReportCsv(report: ReportData): string {
   const escape = (value: string | number | null): string => {
-    const text = value === null || value === undefined ? '' : String(value);
+    let text = value === null || value === undefined ? '' : String(value);
+    // Guard CSV formula injection (security audit M-3): spreadsheet apps
+    // interpret cells that start with =+-@ (or a tab/CR) as formulas, so a
+    // hostile medicine or supplier name could execute in Excel. Prefix an
+    // apostrophe to force the cell to text.
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
     return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
   const lines = [

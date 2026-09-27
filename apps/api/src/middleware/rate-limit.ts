@@ -11,6 +11,7 @@ import type { Request } from 'express';
  *  - Signup:                 5 requests / hour / IP
  *  - Verification resend:    5 requests / hour / IP + email
  *  - Session exchange:      10 requests / 15 minutes / IP
+ *  - Session refresh:       30 requests / 15 minutes / IP
  *  - AI OCR (Phase 5):      20 requests / hour / user (plan-based later)
  *
  * NOTE: for multi-instance production deployments, replace the default
@@ -73,6 +74,14 @@ export const verificationLimiter = makeLimiter(60 * 60_000, 5, (req) =>
 );
 
 export const sessionExchangeLimiter = makeLimiter(15 * 60_000, 10, ipOf);
+
+/**
+ * Refresh tokens are high-entropy, so this defends in depth against token
+ * spraying rather than brute force. The budget is generous for legitimate
+ * use: the access token lives 1 hour, so real traffic is a few refreshes
+ * per user per window even across a shared office IP.
+ */
+export const refreshLimiter = makeLimiter(15 * 60_000, 30, ipOf);
 
 export const ocrLimiter = makeLimiter(60 * 60_000, 20, (req) =>
   req.auth ? `ocr:user:${req.auth.userId}` : `ocr:ip:${ipOf(req)}`,

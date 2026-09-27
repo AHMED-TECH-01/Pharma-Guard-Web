@@ -20,6 +20,26 @@ const nextConfig: NextConfig = {
     if (!api) return [];
     return [{ source: '/api/v1/:path*', destination: `${api}/api/v1/:path*` }];
   },
+  // Baseline security headers (security audit M-4). The CSP is deliberately
+  // narrow — framing, plugins and base hijinks only — because a full
+  // default-src policy needs an inventory of every third-party origin
+  // (Supabase, fonts, analytics) and would risk breaking the app.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
