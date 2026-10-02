@@ -78,14 +78,24 @@ export async function requireAuth(
 
     const payload = await verifyAccessToken(token);
 
-    // Retries transient Supabase edge faults (PGRST303 stale time cache).
-    const { data: profile, error: profileError } = await withTransientRetry(() =>
-      getSupabaseAdmin()
-        .from('profiles')
-        .select('id, full_name, phone')
-        .eq('id', payload.sub)
-        .single(),
-    );
+    // Profile and memberships both key off the verified token subject, so
+    // they load in parallel: this halves the auth chain's sequential DB
+    // round trips, which dominate request latency when the API and database
+    // live in different regions (measured ~1s per Supabase round trip from
+    // the deployed function region).
+    const [profileResult, memberships] = await Promise.all([
+      // Retries transient Supabase edge faults (PGRST303 stale time cache).
+      withTransientRetry(() =>
+        getSupabaseAdmin()
+          .from('profiles')
+          .select('id, full_name, phone')
+          .eq('id', payload.sub)
+          .single(),
+      ),
+      loadMemberships(payload.sub),
+    ]);
+
+    const { data: profile, error: profileError } = profileResult;
 
     if (profileError) {
       // Distinguish a genuinely missing profile (PGRST116: no rows) from an
@@ -103,8 +113,6 @@ export async function requireAuth(
     if (!profile) {
       throw ApiError.unauthorized('Account profile not found');
     }
-
-    const memberships = await loadMemberships(profile.id);
 
     req.auth = {
       userId: profile.id,

@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "regions": ["hnd1"],
   "installCommand": "cd ../.. && npm install --include=dev",
   "buildCommand": "npm run prebuild && node scripts/build-vercel.mjs",
   "outputDirectory": "public",
