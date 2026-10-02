@@ -44,6 +44,7 @@ export const PERMISSIONS = {
   usersRead: 'users.read',
   usersManage: 'users.manage',
   settingsManage: 'settings.manage',
+  billingManage: 'billing.manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -77,9 +78,11 @@ export const OPERATIONAL_PERMISSIONS: string[] = [
 /**
  * Administrative capabilities that stay role-restricted. `users.manage`
  * covers actions that affect other people's accounts (invite, role changes,
- * suspension, removal) and therefore is not part of the operational set.
+ * suspension, removal); `billing.manage` covers subscription payments and
+ * plan switches ("who controls the money"). Neither is part of the
+ * operational set.
  */
-export const ADMINISTRATIVE_PERMISSIONS: string[] = ['users.manage'];
+export const ADMINISTRATIVE_PERMISSIONS: string[] = ['users.manage', 'billing.manage'];
 
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   OWNER: ['*'],

@@ -15,7 +15,6 @@ interface ReturnRow {
   id: string;
   supplier_id: string | null;
   batch_id: string;
-  medicine_id: string;
   quantity: number;
   reason: ReturnListItem['reason'];
   status: ReturnListItem['status'];
@@ -25,7 +24,7 @@ interface ReturnRow {
   suppliers: { name: string } | null;
   batches: {
     batch_no: string;
-    medicines: { name: string; strength: string | null } | null;
+    medicines: { id: string; name: string; strength: string | null } | null;
   } | null;
 }
 
@@ -36,7 +35,8 @@ function mapReturn(row: ReturnRow): ReturnListItem {
     supplierName: row.suppliers?.name ?? null,
     batchId: row.batch_id,
     batchNo: row.batches?.batch_no ?? '—',
-    medicineId: row.medicine_id,
+    // medicine flows through the batch: returns has no medicine_id column.
+    medicineId: row.batches?.medicines?.id ?? '',
     medicineName: row.batches?.medicines?.name ?? 'Unknown medicine',
     medicineStrength: row.batches?.medicines?.strength ?? null,
     quantity: row.quantity,
@@ -66,7 +66,7 @@ function mapRpcError(error: { message?: string } | null, fallback: string): ApiE
 }
 
 const RETURN_SELECT =
-  'id, supplier_id, batch_id, medicine_id, quantity, reason, status, notes, return_date, created_at, suppliers(name), batches(batch_no, medicines(name, strength))';
+  'id, supplier_id, batch_id, quantity, reason, status, notes, return_date, created_at, suppliers(name), batches(batch_no, medicines(id, name, strength))';
 
 export async function createReturn(
   pharmacyId: string,
@@ -191,14 +191,16 @@ export async function approveReturn(
     throw ApiError.conflict('This return has already been actioned.');
   }
 
-  const { data, error } = await supabase.rpc('approve_return', {
+  const { error } = await supabase.rpc('approve_return', {
     p_pharmacy_id: pharmacyId,
     p_return_id: returnId,
     p_user_id: userId,
   });
   if (error) throw mapRpcError(error, 'Could not approve the return');
 
-  const updated = mapReturn(data as unknown as ReturnRow);
+  // The RPC returns a bare returns row (no embeds); reload through loadOne so
+  // the response carries the same medicine/batch detail as the list endpoint.
+  const updated = await loadOne(pharmacyId, returnId);
   await writeAudit({
     pharmacyId,
     userId,
@@ -224,14 +226,15 @@ export async function completeReturn(
     throw ApiError.conflict('Only approved returns can be completed.');
   }
 
-  const { data, error } = await supabase.rpc('complete_return', {
+  const { error } = await supabase.rpc('complete_return', {
     p_pharmacy_id: pharmacyId,
     p_return_id: returnId,
     p_return_date: null,
   });
   if (error) throw mapRpcError(error, 'Could not complete the return');
 
-  const updated = mapReturn(data as unknown as ReturnRow);
+  // Same reload-as-list rationale as approve_return.
+  const updated = await loadOne(pharmacyId, returnId);
   await writeAudit({
     pharmacyId,
     userId,
@@ -257,13 +260,14 @@ export async function rejectReturn(
     throw ApiError.conflict('This return has already been actioned.');
   }
 
-  const { data, error } = await supabase.rpc('reject_return', {
+  const { error } = await supabase.rpc('reject_return', {
     p_pharmacy_id: pharmacyId,
     p_return_id: returnId,
   });
   if (error) throw mapRpcError(error, 'Could not reject the return');
 
-  const updated = mapReturn(data as unknown as ReturnRow);
+  // Same reload-as-list rationale as approve_return.
+  const updated = await loadOne(pharmacyId, returnId);
   await writeAudit({
     pharmacyId,
     userId,

@@ -24,8 +24,8 @@ export default function PricingPage() {
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-text-muted">
               Every plan includes batch-level expiry tracking, the AI medicine scanner and
-              role-based access. Billing activation is coming soon; pricing is a product
-              proposal and may be adjusted before launch.
+              role-based access. Start free, then subscribe from your dashboard - payments
+              are verified by our team, usually within a day.
             </p>
           </div>
         </section>
@@ -33,7 +33,7 @@ export default function PricingPage() {
         <section className="mx-auto max-w-6xl px-6 py-14">
           <PlanCards />
           <p className="mt-8 text-center text-xs text-text-muted">
-            All prices in PKR, billed monthly. Enterprise plans are quoted individually.
+            All prices in PKR, billed monthly. Pay via Easypaisa, JazzCash or bank transfer.
           </p>
         </section>
 

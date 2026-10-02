@@ -2,6 +2,7 @@ import type { InviteMemberResult, MemberListItem, MemberListResponse, UserRole }
 import { getSupabaseAdmin } from '../../database/supabase.js';
 import { dbError } from '../../utils/db-error.js';
 import { logger } from '../../utils/logger.js';
+import { assertWithinPlanLimit } from '../../utils/plan-limits.js';
 import { ApiError } from '../../utils/api-error.js';
 import { writeAudit } from '../../utils/audit.js';
 
@@ -132,6 +133,9 @@ export async function inviteMember(
   if (input.role === 'OWNER') {
     throw ApiError.badRequest('New members cannot be invited as OWNER');
   }
+
+  // Subscription spec §19: write-side seat limit.
+  await assertWithinPlanLimit(pharmacyId, 'users');
 
   const supabase = getSupabaseAdmin();
 

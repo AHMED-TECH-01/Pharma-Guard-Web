@@ -6,11 +6,14 @@ import helmet from 'helmet';
 import { getCorsOptions } from './config/cors.js';
 import { requireAuth, resolvePharmacyContext } from './middleware/auth.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
+import { requirePlatformAdmin } from './middleware/platform-admin.js';
 import { generalLimiter } from './middleware/rate-limit.js';
 import { requestContext } from './middleware/request-context.js';
 import { analyticsRouter } from './modules/analytics/analytics.routes.js';
 import { auditRouter, complianceRouter } from './modules/audit/audit.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { adminBillingRouter } from './modules/billing/admin.routes.js';
+import { billingRouter } from './modules/billing/billing.routes.js';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { mountHealth } from './modules/health/health.routes.js';
 import { inventoryRouter } from './modules/inventory/inventory.routes.js';
@@ -64,6 +67,15 @@ export function createApp(): express.Express {
   onboardingArea.use('/onboarding', onboardingRouter);
   api.use(onboardingArea);
 
+  // Platform-admin area (spec §18): authenticated + email-allowlisted, with
+  // no tenant context - payment review spans all pharmacies. Mounted before
+  // the tenant-resolved area so a platform admin who belongs to no pharmacy
+  // is never blocked by its 403.
+  const adminArea = Router();
+  adminArea.use(requireAuth, requirePlatformAdmin, generalLimiter);
+  adminArea.use('/', adminBillingRouter);
+  api.use('/admin', adminArea);
+
   // Authenticated area: session -> tenant context -> per-user rate limit.
   const protectedArea = Router();
   protectedArea.use(requireAuth, resolvePharmacyContext, generalLimiter);
@@ -88,6 +100,7 @@ export function createApp(): express.Express {
   protectedArea.use('/compliance', complianceRouter);
   protectedArea.use('/users', usersRouter);
   protectedArea.use('/settings', settingsRouter);
+  protectedArea.use('/billing', billingRouter);
   api.use(protectedArea);
 
   app.use('/api/v1', api);

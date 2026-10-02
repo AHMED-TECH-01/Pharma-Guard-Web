@@ -8,7 +8,7 @@ import { formatGreeting } from '@/lib/format';
 import { AppShell } from '@/components/app-shell';
 import { ErrorState, EmptyState } from '@/components/ui/states';
 import { KpiGrid } from '@/components/dashboard/kpi-grid';
-import { ExpiryOverview, SalesOverview } from '@/components/dashboard/charts';
+import { ExpiryOverview, SalesOverview } from '@/components/dashboard/charts-lazy';
 import {
   ExpiringSoonCard,
   LowStockCard,

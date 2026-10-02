@@ -1,5 +1,6 @@
 export * from './common';
 export * from './auth';
+export * from './billing';
 export * from './medicine';
 export * from './ocr';
 export * from './safety';

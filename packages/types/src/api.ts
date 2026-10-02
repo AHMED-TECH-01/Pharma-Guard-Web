@@ -11,6 +11,7 @@ export type ApiErrorCode =
   | 'CONFLICT'
   | 'RATE_LIMITED'
   | 'OCR_FAILED'
+  | 'PLAN_LIMIT_REACHED'
   | 'EXTERNAL_SERVICE_ERROR'
   | 'INTERNAL_ERROR';
 

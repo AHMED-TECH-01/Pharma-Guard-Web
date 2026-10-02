@@ -4,6 +4,7 @@ import type { OcrExtraction, OcrScanDetail, OcrScanListItem, OcrScanStatus } fro
 import type { OcrCorrection } from '@pharmaguard/validation';
 import { getSupabaseAdmin } from '../../database/supabase.js';
 import { ApiError } from '../../utils/api-error.js';
+import { assertWithinPlanLimit } from '../../utils/plan-limits.js';
 import { extractMedicine } from './gemini.js';
 
 /**
@@ -111,6 +112,9 @@ export async function runOcrScan(
       { acceptedTypes: [...ALLOWED_MIME], declaredMimeType: upload.declaredMimeType },
     );
   }
+
+  // Subscription spec §19: write-side monthly scan limit.
+  await assertWithinPlanLimit(pharmacyId, 'ocrScans');
 
   const fileReference = randomUUID();
   const { data: inserted, error: insertError } = await supabase

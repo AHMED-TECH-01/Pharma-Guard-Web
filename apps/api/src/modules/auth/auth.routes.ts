@@ -10,6 +10,7 @@ import { REFRESH_COOKIE } from '../../config/cookies.js';
 import { clearAuthCookies, setAuthCookies } from '../../config/cookies.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { getPermissionsForRole, PERMISSIONS } from '../../middleware/authorize.js';
+import { isPlatformAdmin } from '../../middleware/platform-admin.js';
 import {
   loginLimiter,
   passwordResetLimiter,
@@ -187,6 +188,7 @@ authRouter.get('/me', requireAuth, async (req, res, next) => {
         : null,
       permissions: active ? getPermissionsForRole(active.role) : [],
       permissionKeys: PERMISSIONS,
+      isPlatformAdmin: await isPlatformAdmin(req.auth.userId),
     });
   } catch (error) {
     next(error);

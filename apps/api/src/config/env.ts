@@ -40,6 +40,21 @@ const envSchema = z.object({
   EXPIRY_WARNING_DAYS: z.coerce.number().int().min(1).max(730).default(90),
 
   AUDIT_IP_SALT: z.string().default(''),
+
+  // Billing (spec §3). Platform admins review manual payments; the comma-
+  // separated email allowlist is the only platform-admin credential.
+  PLATFORM_ADMIN_EMAILS: z.string().default(''),
+
+  // Manual payment receiving accounts (spec §3). Server-only: served to
+  // signed-in users via GET /billing/payment-methods, never bundled into the
+  // web client or committed anywhere. Empty values mean "method unavailable".
+  EASYPAISA_ACCOUNT_NAME: z.string().default(''),
+  EASYPAISA_ACCOUNT_NUMBER: z.string().default(''),
+  JAZZCASH_ACCOUNT_NAME: z.string().default(''),
+  JAZZCASH_ACCOUNT_NUMBER: z.string().default(''),
+  BANK_ACCOUNT_NAME: z.string().default(''),
+  BANK_NAME: z.string().default(''),
+  BANK_ACCOUNT_NUMBER: z.string().default(''),
 });
 
 export type AppEnv = z.infer<typeof envSchema> & {

@@ -82,6 +82,8 @@ export interface UploadOptions {
   file: File;
   /** Multipart field name expected by the API; defaults to "image". */
   fieldName?: string;
+  /** Extra multipart text fields (e.g. billing payment metadata). */
+  fields?: Record<string, string>;
   pharmacyId?: string;
   signal?: AbortSignal;
 }
@@ -98,6 +100,9 @@ async function upload<TData>(path: string, options: UploadOptions): Promise<TDat
 
   const form = new FormData();
   form.append(options.fieldName ?? 'image', options.file);
+  for (const [key, value] of Object.entries(options.fields ?? {})) {
+    form.append(key, value);
+  }
 
   let response: Response;
   try {
@@ -194,16 +199,33 @@ export interface SessionData {
     role: UserRole;
   } | null;
   permissions: string[];
+  /** True when the user's email is on the platform-admin allowlist. */
+  isPlatformAdmin: boolean;
 }
 
 /**
  * Loads the current session. When the access cookie has expired (401) a
  * single silent refresh is attempted before giving up; returns null when
  * unauthenticated so callers can redirect to /login.
+ *
+ * Concurrent calls share one in-flight request - pages and their header
+ * components mount together, and without dedupe each mount fired its own
+ * GET /auth/me round-trip (subscriptions spec §16).
  */
-export async function fetchSession(signal?: AbortSignal): Promise<SessionData | null> {
+let inFlightSession: Promise<SessionData | null> | null = null;
+
+export function fetchSession(_signal?: AbortSignal): Promise<SessionData | null> {
+  if (!inFlightSession) {
+    inFlightSession = loadSession().finally(() => {
+      inFlightSession = null;
+    });
+  }
+  return inFlightSession;
+}
+
+async function loadSession(): Promise<SessionData | null> {
   try {
-    return await api.get<SessionData>('/auth/me', { signal });
+    return await api.get<SessionData>('/auth/me');
   } catch (error) {
     if (!(error instanceof ApiClientError) || error.status !== 401) {
       return null;
@@ -214,7 +236,7 @@ export async function fetchSession(signal?: AbortSignal): Promise<SessionData | 
       return null;
     }
     try {
-      return await api.get<SessionData>('/auth/me', { signal });
+      return await api.get<SessionData>('/auth/me');
     } catch {
       return null;
     }

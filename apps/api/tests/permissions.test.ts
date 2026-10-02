@@ -10,6 +10,7 @@ import {
 describe('role permission model (access model: operational access for every member)', () => {
   it('grants OWNER everything', () => {
     expect(hasPermission('OWNER', 'users.manage')).toBe(true);
+    expect(hasPermission('OWNER', 'billing.manage')).toBe(true);
     expect(hasPermission('OWNER', 'settings.manage')).toBe(true);
     expect(hasPermission('OWNER', 'inventory.write')).toBe(true);
   });
@@ -36,11 +37,14 @@ describe('role permission model (access model: operational access for every memb
     }
   });
 
-  it('keeps user management (users.manage) OWNER-only', () => {
+  it('keeps administrative capabilities (users.manage, billing.manage) OWNER-only', () => {
     expect(hasPermission('MANAGER', 'users.manage')).toBe(false);
     expect(hasPermission('PHARMACIST', 'users.manage')).toBe(false);
     expect(hasPermission('STAFF', 'users.manage')).toBe(false);
-    expect(ADMINISTRATIVE_PERMISSIONS).toEqual(['users.manage']);
+    expect(hasPermission('MANAGER', 'billing.manage')).toBe(false);
+    expect(hasPermission('PHARMACIST', 'billing.manage')).toBe(false);
+    expect(hasPermission('STAFF', 'billing.manage')).toBe(false);
+    expect(ADMINISTRATIVE_PERMISSIONS).toEqual(['users.manage', 'billing.manage']);
   });
 
   it('never matches a partial prefix without the dot boundary', () => {
@@ -63,11 +67,13 @@ describe('role permission model (access model: operational access for every memb
       expect(permissions).toContain('inventory.write');
       expect(permissions).toContain('users.read');
       expect(permissions).not.toContain('users.manage');
+      expect(permissions).not.toContain('billing.manage');
     }
     expect(ROLE_PERMISSIONS.STAFF.length).toBeGreaterThan(0);
   });
 
   it('keeps the operational set free of administrative capabilities', () => {
     expect(OPERATIONAL_PERMISSIONS).not.toContain('users.manage');
+    expect(OPERATIONAL_PERMISSIONS).not.toContain('billing.manage');
   });
 });

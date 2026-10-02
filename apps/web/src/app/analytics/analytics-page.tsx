@@ -14,7 +14,7 @@ import type {
 import { api, downloadFile, fetchSession, type SessionData } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
 import { EmptyState, ErrorState } from '@/components/ui/states';
-import { ExpiryOverview, SalesOverview } from '@/components/dashboard/charts';
+import { ExpiryOverview, SalesOverview } from '@/components/dashboard/charts-lazy';
 import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
 import { HealthScore } from '@/components/analytics/health-score';
 import { StatCard } from '@/components/ui/stat-card';

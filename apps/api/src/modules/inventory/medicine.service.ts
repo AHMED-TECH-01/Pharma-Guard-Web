@@ -14,6 +14,7 @@ import type {
 } from '@pharmaguard/validation';
 import { getSupabaseAdmin } from '../../database/supabase.js';
 import { ApiError } from '../../utils/api-error.js';
+import { assertWithinPlanLimit } from '../../utils/plan-limits.js';
 import { mapBatch } from './batch.service.js';
 
 /**
@@ -334,6 +335,9 @@ export async function createMedicine(
   input: CreateMedicineInput,
 ): Promise<Medicine> {
   const supabase = getSupabaseAdmin();
+
+  // Subscription spec §19: write-side plan limit (reads stay unlimited).
+  await assertWithinPlanLimit(pharmacyId, 'medicines');
 
   if (!input.confirmDuplicate) {
     const duplicates = await findPotentialDuplicates(pharmacyId, input);

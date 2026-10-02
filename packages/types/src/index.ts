@@ -1,4 +1,5 @@
 export * from './enums';
+export * from './billing';
 export * from './api';
 export * from './entities';
 export * from './dashboard';

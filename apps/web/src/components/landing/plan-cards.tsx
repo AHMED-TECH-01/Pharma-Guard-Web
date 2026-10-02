@@ -4,8 +4,8 @@ import { PLANS } from '@/lib/plans';
 
 /**
  * PlanCards (ui-rules §19): easy-to-compare plan grid with price, billing
- * period, feature list, CTA, and a "Recommended" badge. Values come from
- * the shared plans data (PRD §10.22).
+ * period, feature list, CTA, and a "Recommended" badge. Values come from the
+ * shared plans source of truth (packages/types billing.ts) via lib/plans.
  */
 
 interface PlanCardsProps {
@@ -35,8 +35,8 @@ export function PlanCards({ ctaHref = '/signup', ctaLabel = 'Get Started' }: Pla
           <p className="mt-1 text-xs text-text-muted">{plan.description}</p>
 
           <p className="mt-4">
-            <span className="text-2xl font-semibold tracking-tight">{plan.price}</span>
-            {plan.period ? (
+            <span className="text-2xl font-semibold tracking-tight">{plan.priceLabel}</span>
+            {plan.pricePkr > 0 ? (
               <span className="text-sm text-text-muted">{plan.period}</span>
             ) : null}
           </p>
@@ -58,7 +58,7 @@ export function PlanCards({ ctaHref = '/signup', ctaLabel = 'Get Started' }: Pla
                 : 'border border-border bg-surface hover:bg-surface-muted'
             }`}
           >
-            {plan.id === 'enterprise' ? 'Contact Us' : ctaLabel}
+            {plan.pricePkr === 0 ? 'Start Free' : ctaLabel}
           </Link>
         </div>
       ))}

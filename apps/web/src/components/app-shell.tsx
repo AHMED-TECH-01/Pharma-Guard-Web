@@ -10,6 +10,7 @@ import {
   CalendarClock,
   ClipboardList,
   ClipboardCheck,
+  CreditCard,
   FileCheck2,
   LayoutDashboard,
   LifeBuoy,
@@ -17,6 +18,7 @@ import {
   Menu,
   Package,
   PackageX,
+  Receipt,
   RefreshCw,
   RotateCcw,
   ScanLine,
@@ -146,6 +148,8 @@ function LogoutDialog({
 interface AppShellProps {
   userName: string;
   userRole: UserRole | null;
+  /** Platform admins (env email allowlist) also see the payment console. */
+  isPlatformAdmin?: boolean;
   /** Kept for callers, displayed by pages themselves (reference has no
    *  pharmacy label in the topbar). */
   pharmacyName?: string | null;
@@ -158,6 +162,7 @@ interface AppShellProps {
 export function AppShell({
   userName,
   userRole,
+  isPlatformAdmin = false,
   unreadAlertsCount = 0,
   onLogout,
   logoutPending = false,
@@ -167,12 +172,22 @@ export function AppShell({
   const [logoutOpen, setLogoutOpen] = useState(false);
   const pathname = usePathname();
 
+  // Subscription management is a normal member feature; the payment review
+  // console only appears for platform admins (the API enforces it too).
+  const navItems: NavItem[] = [
+    ...NAV_ITEMS,
+    { label: 'Subscription', icon: CreditCard, href: '/subscription' },
+    ...(isPlatformAdmin
+      ? [{ label: 'Payment Reviews', icon: Receipt, href: '/admin/payments' }]
+      : []),
+  ];
+
   const isItemActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
   const navList = (onNavigate?: () => void) => (
     <ul className="space-y-1">
-      {NAV_ITEMS.map((item) => {
+      {navItems.map((item) => {
         const Icon = item.icon;
         const active = isItemActive(item.href);
         return (

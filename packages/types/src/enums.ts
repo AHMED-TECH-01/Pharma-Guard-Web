@@ -57,8 +57,10 @@ export type OcrScanStatus =
   | 'CONFIRMED'
   | 'DISCARDED';
 
-/** Subscription plans are a product proposal; enforced server-side (TRD §32). */
+/** Offered plans live in billing.ts (single source of truth, PRD §10.22);
+ *  ENTERPRISE stays valid for legacy rows but is no longer offered. */
 export type SubscriptionPlan =
+  | 'FREE'
   | 'STARTER'
   | 'PROFESSIONAL'
   | 'PREMIUM'

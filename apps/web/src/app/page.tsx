@@ -389,7 +389,7 @@ function PricingSection() {
       id="pricing"
       eyebrow="Pricing"
       title="Simple monthly plans in PKR."
-      lead="Start small and grow. Plan enforcement is coming with billing - pricing is a product proposal and may be adjusted before launch."
+      lead="Start small and grow. Every plan includes the AI medicine scanner, expiry alerts and full inventory control - switch or cancel anytime."
     >
       <PlanCards />
     </SectionShell>
