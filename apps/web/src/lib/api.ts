@@ -75,7 +75,12 @@ async function request<TData>(method: Method, path: string, options: RequestOpti
     throw new ApiClientError('EXTERNAL_SERVICE_ERROR', 'Unable to reach the server.', 0, cause);
   }
 
-  return parseEnvelope<TData>(response);
+  const data = await parseEnvelope<TData>(response);
+  // Mutations can change the session (logout, pharmacy switch, role edits).
+  if (method !== 'GET') {
+    invalidateSessionCache();
+  }
+  return data;
 }
 
 export interface UploadOptions {
@@ -117,7 +122,9 @@ async function upload<TData>(path: string, options: UploadOptions): Promise<TDat
     throw new ApiClientError('EXTERNAL_SERVICE_ERROR', 'Unable to reach the server.', 0, cause);
   }
 
-  return parseEnvelope<TData>(response);
+  const data = await parseEnvelope<TData>(response);
+  invalidateSessionCache();
+  return data;
 }
 
 export const api = {
@@ -214,11 +221,37 @@ export interface SessionData {
  */
 let inFlightSession: Promise<SessionData | null> | null = null;
 
+/**
+ * Short-lived cache of the last verified session. Every app page re-runs its
+ * session gate on mount; without this, each in-app navigation re-rendered
+ * the "Loading session" placeholder (dashboard/onboarding draw it as a
+ * full-height sidebar block - the reported "green rectangle" flash) while
+ * GET /auth/me round-tripped. The 30s window only covers navigation bursts:
+ * every mutating request clears the cache, so pharmacy switches, role
+ * changes and logouts are never served stale.
+ */
+const SESSION_CACHE_TTL_MS = 30_000;
+let sessionCache: { data: SessionData; at: number } | null = null;
+
+function invalidateSessionCache(): void {
+  sessionCache = null;
+}
+
 export function fetchSession(_signal?: AbortSignal): Promise<SessionData | null> {
+  if (sessionCache && Date.now() - sessionCache.at < SESSION_CACHE_TTL_MS) {
+    return Promise.resolve(sessionCache.data);
+  }
   if (!inFlightSession) {
-    inFlightSession = loadSession().finally(() => {
-      inFlightSession = null;
-    });
+    inFlightSession = loadSession()
+      .then((data) => {
+        if (data) {
+          sessionCache = { data, at: Date.now() };
+        }
+        return data;
+      })
+      .finally(() => {
+        inFlightSession = null;
+      });
   }
   return inFlightSession;
 }

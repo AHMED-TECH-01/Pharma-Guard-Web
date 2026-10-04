@@ -69,16 +69,31 @@ function SectionShell({
 
 function Hero() {
   return (
-    <section className="border-b border-border bg-surface-muted">
-      <div className="mx-auto max-w-6xl px-6 py-20 sm:py-28">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-primary-800">
+    <section className="relative isolate border-b border-border bg-primary-950 text-white">
+      {/* Main-page-only backdrop, scoped to this landing component (never
+          body/html/layout): the supplied artwork, cover-positioned so its
+          luminous ribbons stay right of the text column where the viewport
+          is wide enough to show them (left-anchored on phones, where cover
+          would otherwise crop the dark readable zone away). */}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[url(/brand/landing-bg.png)] bg-cover bg-left sm:bg-right"
+      />
+      {/* Subtle brand-tinted scrim, strongest behind the headline; keeps the
+          image clearly visible while guaranteeing text contrast. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-r from-primary-950/80 via-primary-950/35 to-transparent"
+      />
+      <div className="relative mx-auto max-w-6xl px-6 py-20 sm:py-28">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-primary-100">
           <ShieldCheck className="size-3.5" aria-hidden />
           Built for independent pharmacies in Pakistan
         </span>
         <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
           Make every pharmacy safer and smarter.
         </h1>
-        <p className="mt-5 max-w-2xl text-base leading-relaxed text-text-muted">
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">
           PharmaGuard turns inventory data into clear, timely actions - expiring batches
           caught before they harm patients or your margin, reorders suggested before
           stockouts, and compliance records kept without paperwork.
@@ -86,23 +101,23 @@ function Hero() {
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/signup"
-            className="flex h-11 items-center justify-center gap-2 rounded-md bg-primary-700 px-6 text-sm font-medium text-white transition-colors duration-150 hover:bg-primary-800"
+            className="flex h-11 items-center justify-center gap-2 rounded-md bg-primary-500 px-6 text-sm font-semibold text-primary-950 transition-colors duration-150 hover:bg-primary-600 hover:text-white"
           >
             Create your account
             <ArrowRight className="size-4" aria-hidden />
           </Link>
           <Link
             href="/pricing"
-            className="flex h-11 items-center justify-center rounded-md border border-border bg-surface px-6 text-sm font-medium transition-colors duration-150 hover:bg-surface"
+            className="flex h-11 items-center justify-center rounded-md border border-white/30 bg-white/10 px-6 text-sm font-medium text-white transition-colors duration-150 hover:bg-white/20"
           >
             View pricing
           </Link>
         </div>
-        <ul className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-sm text-text-muted">
+        <ul className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/75">
           {['Batch-level expiry tracking', 'AI medicine scanner', 'DRAP-friendly audit trail'].map(
             (item) => (
               <li key={item} className="flex items-center gap-1.5">
-                <Check className="size-4 text-status-success-fg" aria-hidden />
+                <Check className="size-4 text-primary-500" aria-hidden />
                 {item}
               </li>
             ),
